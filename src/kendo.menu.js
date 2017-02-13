@@ -470,7 +470,7 @@ var __meta__ = { // jshint ignore:line
 
         _initOverflow: function(options) {
             if (!options.overflow) {
-                //return;
+                return;
             }
 
             this._overflowWrapper = this.element.wrap("<div class='k-menu-scroll-wrapper'></div>").parent();
