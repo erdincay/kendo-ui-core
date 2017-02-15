@@ -42,8 +42,8 @@ var __meta__ = { // jshint ignore:line
         pointers = kendo.support.pointers,
         msPointers = kendo.support.msPointers,
         allPointers = msPointers || pointers,
-        MOUSEENTER = pointers ? "pointerover" : (msPointers ? "MSPointerOver" : "mouseenter"),
-        MOUSELEAVE = pointers ? "pointerout" : (msPointers ? "MSPointerOut" : "mouseleave"),
+        MOUSEENTER = pointers ? "pointerenter" : (msPointers ? "MSPointerEnter" : "mouseenter"),
+        MOUSELEAVE = pointers ? "pointerleave" : (msPointers ? "MSPointerLeave" : "mouseleave"),
         mobile = touch || allPointers,
         DOCUMENT_ELEMENT = $(document.documentElement),
         KENDOPOPUP = "kendoPopup",
@@ -90,6 +90,10 @@ var __meta__ = { // jshint ignore:line
                     "#= renderContent(data) #" +
                     "# } #" +
                 "</li>"
+            ),
+            scrollButton: template(
+                "<span class='k-button k-button-icon' style='top:0;#= direction #:0;position:absolute;height:100%;display:none;' unselectable='on'>" +
+                "<span class='k-icon k-i-arrow-60-#= direction #'></span></span>"
             ),
             image: template("<img #= imageCssAttributes(item) # alt='' src='#= item.imageUrl #' />"), // class='k-image'
             arrow: template("<span class='#= arrowClass(item, group) #'></span>"),
@@ -405,7 +409,9 @@ var __meta__ = { // jshint ignore:line
                        MOUSEDOWN + NS + " " + CLICK + NS, linkSelector, proxy(that._toggleHover, that));
 
             if (this._overflowWrapper) {
-                this._overflowWrapper.find("ul.k-menu-group").on(MOUSELEAVE + NS, proxy(that._mouseleaveGroup, that));
+                this._overflowWrapper.find("ul.k-menu-group")
+                    .on(MOUSELEAVE + NS, proxy(that._mouseleaveGroup, that))
+                    .on(MOUSEENTER + NS, proxy(that._mouseenterGroup, that));
             }
 
             if (options.openOnClick) {
@@ -473,15 +479,61 @@ var __meta__ = { // jshint ignore:line
                 return;
             }
 
-            this._overflowWrapper = this.element.wrap("<div class='k-menu-scroll-wrapper'></div>").parent();
+            var that = this;
+            var menu = that.element;
+            that._groupEntered = {};
+            that._overflowWrapper = menu.wrap("<div class='k-menu-scroll-wrapper'></div>").parent();
             var groupId = new Date().getTime();
 
-            this.element.children().contents("ul.k-group.k-menu-group")
+            menu.children().contents("ul.k-group.k-menu-group")
             .each(function(){
                 $(this).attr("data-group", groupId);
                 $(this.parentNode).attr("data-groupParent", groupId);
                 groupId++;
             });
+
+            var scrolling = false;
+            var speed = 40;
+            var left = "-=" + speed;
+            var right = "+=" + speed;
+
+            that._leftBtn = $(templates.scrollButton({direction: "left"})).appendTo(that._overflowWrapper);
+            that._rightBtn = $(templates.scrollButton({direction: "right"})).appendTo(that._overflowWrapper);
+
+            that._toggleScrollButtons();
+
+            function scroll(value) {
+                menu.finish().animate({ "scrollLeft": value }, "fast", "linear", function () {
+                    if (scrolling) {
+                        scroll(value);
+                    }
+                });
+                that._toggleScrollButtons();
+            }
+
+            var mouseenterHandler = function(e) {
+                if (!scrolling) {
+                    scroll(e.data.direction);
+                    scrolling = true;
+                }
+                e.stopPropagation();
+            };
+            that._leftBtn.on("mouseenter", {direction: left}, mouseenterHandler);
+            that._rightBtn.on("mouseenter", {direction: right}, mouseenterHandler);
+
+            that._leftBtn.add(that._rightBtn)
+                .on("mouseleave", function() {
+                    menu.stop();
+                    scrolling = false;
+                });
+        },
+
+        _toggleScrollButtons: function (){
+            var ul = this.element,
+                scrollLeft = ul.scrollLeft();
+
+            this._leftBtn.toggle(scrollLeft !== 0);
+            this._rightBtn.toggle(scrollLeft < ul[0].scrollWidth - ul[0].offsetWidth - 1);
         },
 
         setOptions: function(options) {
@@ -761,17 +813,24 @@ var __meta__ = { // jshint ignore:line
                         }
                         ul.removeAttr("aria-hidden");
 
-                        if (that._overflowWrapper && popup.wrapper.length &&
-                            $(popup.options.appendTo).is(that._overflowWrapper) && !popup.wrapper.parent().is(that._overflowWrapper)) {
-                            popup.wrapper.appendTo(that._overflowWrapper);
+                        if (that._overflowWrapper) {
+                            if (popup.wrapper.length &&
+                                $(popup.options.appendTo).is(that._overflowWrapper) && !popup.wrapper.parent().is(that._overflowWrapper)) {
+                                popup.wrapper.appendTo(that._overflowWrapper);
+                            }
+
+                            //when menu direction is top and the popup is opened for the first time popup height is not calculated properly and its position is wrong
+                            if (popup.element.parent().is(that._overflowWrapper)) {
+                                kendo.wrap(popup.element, popup.options.autosize)
+                                    .css({
+                                        overflow: "hidden",
+                                        display: "block",
+                                        position: "absolute"
+                                    });
+                            }
                         }
 
-                        if (popup.wrapper.parent().is(that._overflowWrapper) || popup.element.parent().is(that._overflowWrapper)) {
-                            var offset = that._itemOffset(li.get(0), directions);
-                            popup.open(offset.left, offset.top);
-                        } else {
-                            popup.open();
-                        }
+                        popup.open();
                     }
 
                 }, that.options.hoverDelay));
@@ -779,18 +838,7 @@ var __meta__ = { // jshint ignore:line
 
             return that;
         },
-        _itemOffset: function (item, directions) {
-            var offset = $(item).offset();
 
-            if (directions.origin.indexOf("bottom") >= 0) {
-                offset.top += item.offsetHeight;
-            }
-            // else if (directions.origin.top) {
-            //     offset.top -= item.offsetHeight;
-            // }
-
-            return offset;
-        },
         close: function (items, dontClearClose) {
             var that = this,
                 element = (that._overflowWrapper || that.element);
@@ -811,9 +859,20 @@ var __meta__ = { // jshint ignore:line
                 clearTimeout(li.data(TIMER));
 
                 li.data(TIMER, setTimeout(function () {
-                    var popup = li.find(".k-menu-group:not(.k-list-container):not(.k-calendar-container):first:visible").data(KENDOPOPUP);
+                    var popup = li.find(".k-menu-group:not(.k-list-container):not(.k-calendar-container):first:visible").data(KENDOPOPUP),
+                        groupId = li.data("groupparent"),
+                        popupElement;
 
-                    if (popup) {
+                    if (!popup && groupId) {
+                        popupElement = that._overflowWrapper.find("[data-group='" + groupId + "']");
+                        popup = popupElement.data(KENDOPOPUP);
+                    }
+
+                    if (popup && (!popupElement || (popupElement && !that._groupEntered[groupId.toString()]))) {
+                        var popupParent = popupElement && popupElement.parent();
+                        if (popupParent && popupParent.is("div.k-animation-container")) {
+                            popupParent.appendTo(li);
+                        }
                         popup.close();
                         popup.element.attr("aria-hidden", true);
                     }
@@ -908,6 +967,12 @@ var __meta__ = { // jshint ignore:line
                 element = $(e.currentTarget),
                 hasChildren = (element.children(".k-animation-container").length || element.children(groupSelector).length);
 
+            var group = element.data("groupparent") || element.parent().data("group");
+
+            if (group) {
+                that._groupEntered[group.toString()] = true;
+            }
+
             if (e.delegateTarget != element.parents(menuSelector)[0] && e.delegateTarget != element.parents(".k-menu-scroll-wrapper")[0]) {
                 return;
             }
@@ -931,6 +996,16 @@ var __meta__ = { // jshint ignore:line
                 element = $(e.currentTarget),
                 hasChildren = (element.children(".k-animation-container").length || element.children(groupSelector).length);
 
+            var group = element.data("groupparent");
+            if (group) {
+                that._groupEntered[group.toString()] = undefined;
+                return that.close(element);
+            }
+
+            if (!hasChildren && element.parent().data("group")) {
+                return;
+            }
+
             if (element.parentsUntil(".k-animation-container", ".k-list-container,.k-calendar-container")[0]) {
                 e.stopImmediatePropagation();
                 return;
@@ -943,40 +1018,28 @@ var __meta__ = { // jshint ignore:line
             }
         },
 
+        _mouseenterGroup: function(e){
+            var that = this;
+            var group = $(e.currentTarget);
+            var groupId = group.data("group");
+
+
+            if (!groupId) {
+                return;
+            }
+            that._groupEntered[groupId.toString()] = true;
+        },
+
         _mouseleaveGroup: function (e) {
             var that = this;
             var group = $(e.currentTarget);
             var groupId = group.data("group");
 
-            if (!groupId) {
-                return;
+            if (groupId) {
+                that._groupEntered[groupId.toString()] = undefined;
+                var groupParent = that._overflowWrapper.find("li[data-groupParent='" + groupId + "']");
+                that.close(groupParent);
             }
-
-            var groupSource = this._overflowWrapper.find("li[data-groupParent='" + groupId + "']");
-            var items = groupSource;
-            var animationContainer = group.parent().is("div.k-animation-container") ? group.parent() : undefined;
-
-            items.each(function () {
-                var li = $(this);
-
-                // if (that._isRootItem(li)) {
-                //     that.clicked = false;
-                // }
-
-                clearTimeout(li.data(TIMER));
-
-                li.data(TIMER, setTimeout(function () {
-                    if (groupSource) {
-                        groupSource.append(animationContainer || group);
-                    }
-                    var popup = li.find(".k-menu-group:not(.k-list-container):not(.k-calendar-container):first:visible").data(KENDOPOPUP);
-
-                    if (popup) {
-                        popup.close();
-                        popup.element.attr("aria-hidden", true);
-                    }
-                }, that.options.hoverDelay));
-            });
         },
 
         _click: function (e) {
