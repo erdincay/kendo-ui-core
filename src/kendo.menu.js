@@ -480,36 +480,50 @@ var __meta__ = { // jshint ignore:line
             }
 
             var that = this;
-            var menu = that.element;
             that._groupEntered = {};
-            that._overflowWrapper = menu.wrap("<div class='k-menu-scroll-wrapper'></div>").parent();
-            var groupId = new Date().getTime();
+            that._isRtl = kendo.support.isRtl(that.wrapper);
+            that._overflowWrapper = that.element.wrap("<div class='k-menu-scroll-wrapper'></div>").parent();
 
-            menu.children().contents("ul.k-group.k-menu-group")
-            .each(function(){
-                $(this).attr("data-group", groupId);
-                $(this.parentNode).attr("data-groupParent", groupId);
-                groupId++;
-            });
-
-            var scrolling = false;
-            var speed = 40;
-            var left = "-=" + speed;
-            var right = "+=" + speed;
+            that._mapMenuGroups();
 
             that._leftBtn = $(templates.scrollButton({direction: "left"})).appendTo(that._overflowWrapper);
             that._rightBtn = $(templates.scrollButton({direction: "right"})).appendTo(that._overflowWrapper);
 
             that._toggleScrollButtons();
 
-            function scroll(value) {
+            that._initScrolling();
+        },
+
+        _mapMenuGroups: function() {
+            var that = this;
+            var menu = that.element;
+            var groupId = new Date().getTime();
+
+            menu.children()
+                .contents("ul.k-group.k-menu-group")
+                .each(function(){
+                    $(this).attr("data-group", groupId);
+                    $(this.parentNode).attr("data-groupParent", groupId);
+                    groupId++;
+                });
+        },
+
+        _initScrolling: function() {
+            var that = this,
+                menu = that.element,
+                speed = that.options.scrollSpeed || 40,
+                left = "-=" + speed,
+                right = "+=" + speed,
+                scrolling = false;
+
+            var scroll = function(value) {
                 menu.finish().animate({ "scrollLeft": value }, "fast", "linear", function () {
                     if (scrolling) {
                         scroll(value);
                     }
                 });
                 that._toggleScrollButtons();
-            }
+            };
 
             var mouseenterHandler = function(e) {
                 if (!scrolling) {
@@ -518,22 +532,24 @@ var __meta__ = { // jshint ignore:line
                 }
                 e.stopPropagation();
             };
-            that._leftBtn.on("mouseenter", {direction: left}, mouseenterHandler);
-            that._rightBtn.on("mouseenter", {direction: right}, mouseenterHandler);
+            that._leftBtn.on(MOUSEENTER, {direction: that._isRtl ? right : left}, mouseenterHandler);
+            that._rightBtn.on(MOUSEENTER, {direction: that._isRtl ? left : right}, mouseenterHandler);
 
             that._leftBtn.add(that._rightBtn)
-                .on("mouseleave", function() {
+                .on(MOUSELEAVE, function() {
                     menu.stop();
                     scrolling = false;
+                    that._toggleScrollButtons();
                 });
         },
 
-        _toggleScrollButtons: function (){
-            var ul = this.element,
+        _toggleScrollButtons: function() {
+            var that = this,
+                ul = that.element,
                 scrollLeft = ul.scrollLeft();
 
-            this._leftBtn.toggle(scrollLeft !== 0);
-            this._rightBtn.toggle(scrollLeft < ul[0].scrollWidth - ul[0].offsetWidth - 1);
+            that._leftBtn.toggle(that._isRtl ? scrollLeft < ul[0].scrollWidth - ul[0].offsetWidth - 1 : scrollLeft !== 0);
+            this._rightBtn.toggle(that._isRtl ? scrollLeft !== 0 : scrollLeft < ul[0].scrollWidth - ul[0].offsetWidth - 1);
         },
 
         setOptions: function(options) {
