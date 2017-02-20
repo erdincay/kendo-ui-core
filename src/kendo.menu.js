@@ -44,6 +44,10 @@ var __meta__ = { // jshint ignore:line
         allPointers = msPointers || pointers,
         MOUSEENTER = pointers ? "pointerenter" : (msPointers ? "MSPointerEnter" : "mouseenter"),
         MOUSELEAVE = pointers ? "pointerleave" : (msPointers ? "MSPointerLeave" : "mouseleave"),
+        SCROLLWIDTH = "scrollWidth",
+        SCROLLHEIGHT = "scrollHeight",
+        OFFSETWIDTH = "offsetWidth",
+        OFFSETHEIGHT = "offsetHeight",
         mobile = touch || allPointers,
         DOCUMENT_ELEMENT = $(document.documentElement),
         KENDOPOPUP = "kendoPopup",
@@ -92,7 +96,7 @@ var __meta__ = { // jshint ignore:line
                 "</li>"
             ),
             scrollButton: template(
-                "<span class='k-button k-button-icon' style='top:0;#= direction #:0;position:absolute;height:100%;display:none;' unselectable='on'>" +
+                "<span class='k-button k-button-icon' style='position:absolute;display:none;' unselectable='on'>" +
                 "<span class='k-icon k-i-arrow-60-#= direction #'></span></span>"
             ),
             image: template("<img #= imageCssAttributes(item) # alt='' src='#= item.imageUrl #' />"), // class='k-image'
@@ -480,18 +484,25 @@ var __meta__ = { // jshint ignore:line
             }
 
             var that = this;
+            var isHorizontal = options.orientation == "horizontal";
+            var backwardBtn, forwardBtn;
             that._groupEntered = {};
             that._isRtl = kendo.support.isRtl(that.wrapper);
-            that._overflowWrapper = that.element.wrap("<div class='k-menu-scroll-wrapper'></div>").parent();
+            that._overflowWrapper = that.element.wrap("<div class='k-menu-scroll-wrapper " + options.orientation + "'></div>").parent();
 
             that._mapMenuGroups();
 
-            that._leftBtn = $(templates.scrollButton({direction: "left"})).appendTo(that._overflowWrapper);
-            that._rightBtn = $(templates.scrollButton({direction: "right"})).appendTo(that._overflowWrapper);
-
-            that._toggleScrollButtons();
-
-            that._initScrolling();
+            if (isHorizontal) {
+                backwardBtn = $(templates.scrollButton({direction: "left"})).css({top: 0, left: 0, height: "100%"});
+                forwardBtn = $(templates.scrollButton({direction: "right"})).css({top: 0, right: 0, height: "100%"});
+            } else {
+                backwardBtn = $(templates.scrollButton({direction: "up"})).css({top: 0,left: 0, width: "100%"});
+                forwardBtn = $(templates.scrollButton({direction: "down"})).css({bottom: 0,left: 0, width: "100%"});
+            }
+            backwardBtn.appendTo(that._overflowWrapper);
+            forwardBtn.appendTo(that._overflowWrapper);
+            that._initScrolling(backwardBtn, forwardBtn, isHorizontal);
+            that._toggleScrollButtons(backwardBtn, forwardBtn, isHorizontal);
         },
 
         _mapMenuGroups: function() {
@@ -508,21 +519,22 @@ var __meta__ = { // jshint ignore:line
                 });
         },
 
-        _initScrolling: function() {
+        _initScrolling: function(backwardBtn, forwardBtn, isHorizontal) {
             var that = this,
                 menu = that.element,
                 speed = that.options.scrollSpeed || 40,
-                left = "-=" + speed,
-                right = "+=" + speed,
+                backward = "-=" + speed,
+                forward = "+=" + speed,
                 scrolling = false;
 
             var scroll = function(value) {
-                menu.finish().animate({ "scrollLeft": value }, "fast", "linear", function () {
+                var scrollValue = isHorizontal ? {"scrollLeft": value} : { "scrollTop": value };
+                menu.finish().animate(scrollValue, "fast", "linear", function () {
                     if (scrolling) {
                         scroll(value);
                     }
                 });
-                that._toggleScrollButtons();
+                that._toggleScrollButtons(backwardBtn, forwardBtn, isHorizontal);
             };
 
             var mouseenterHandler = function(e) {
@@ -532,24 +544,27 @@ var __meta__ = { // jshint ignore:line
                 }
                 e.stopPropagation();
             };
-            that._leftBtn.on(MOUSEENTER, {direction: that._isRtl ? right : left}, mouseenterHandler);
-            that._rightBtn.on(MOUSEENTER, {direction: that._isRtl ? left : right}, mouseenterHandler);
 
-            that._leftBtn.add(that._rightBtn)
+            backwardBtn.on(MOUSEENTER, {direction: that._isRtl ? forward : backward}, mouseenterHandler);
+            forwardBtn.on(MOUSEENTER, {direction: that._isRtl ? backward : forward}, mouseenterHandler);
+
+            backwardBtn.add(forwardBtn)
                 .on(MOUSELEAVE, function() {
                     menu.stop();
                     scrolling = false;
-                    that._toggleScrollButtons();
+                    that._toggleScrollButtons(backwardBtn, forwardBtn, isHorizontal);
                 });
         },
 
-        _toggleScrollButtons: function() {
+        _toggleScrollButtons: function(backwardBtn, forwardBtn, horizontal) {
             var that = this,
                 ul = that.element,
-                scrollLeft = ul.scrollLeft();
+                currentScroll = horizontal ? ul.scrollLeft() : ul.scrollTop(),
+                scrollSize = horizontal ? SCROLLWIDTH : SCROLLHEIGHT,
+                offset = horizontal ? OFFSETWIDTH : OFFSETHEIGHT;
 
-            that._leftBtn.toggle(that._isRtl ? scrollLeft < ul[0].scrollWidth - ul[0].offsetWidth - 1 : scrollLeft !== 0);
-            this._rightBtn.toggle(that._isRtl ? scrollLeft !== 0 : scrollLeft < ul[0].scrollWidth - ul[0].offsetWidth - 1);
+            backwardBtn.toggle(that._isRtl ? currentScroll < ul[0][scrollSize] - ul[0][offset] - 1 : currentScroll !== 0);
+            forwardBtn.toggle(that._isRtl ? currentScroll !== 0 : currentScroll < ul[0][scrollSize] - ul[0][offset] - 1);
         },
 
         setOptions: function(options) {
