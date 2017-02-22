@@ -375,6 +375,26 @@ var __meta__ = { // jshint ignore:line
         return null;
     }
 
+    function popupOpenerSelector(id){
+        return id ? "li[data-groupparent='" + id + "']" : "li[data-groupparent]";
+    }
+    function popupGroupSelector(id) {
+        return id ? "ul[data-group='" + id + "']" : "ul[data-group]";
+    }
+    function getChildPopups (currentPopup, overflowWrapper) {
+        var childPopupOpener = currentPopup.find(popupOpenerSelector());
+        var popupId = childPopupOpener.data("groupparent");
+        var popup = currentPopup;
+        var result = [];
+        while(popupId) {
+            popup = overflowWrapper.find(popupGroupSelector(popupId));
+            result.push(popup);
+            childPopupOpener = popup.find(popupOpenerSelector());
+            popupId = childPopupOpener.data("groupparent");
+        }
+        return result;
+    }
+
     var Menu = Widget.extend({
         init: function(element, options) {
             var that = this;
@@ -486,11 +506,9 @@ var __meta__ = { // jshint ignore:line
             var that = this;
             var isHorizontal = options.orientation == "horizontal";
             var backwardBtn, forwardBtn;
-            that._groupEntered = {};
+            that._openedPopups = {};
             that._isRtl = kendo.support.isRtl(that.wrapper);
             that._overflowWrapper = that.element.wrap("<div class='k-menu-scroll-wrapper " + options.orientation + "'></div>").parent();
-
-            that._mapMenuGroups();
 
             if (isHorizontal) {
                 backwardBtn = $(templates.scrollButton({direction: "left"})).css({top: 0, left: 0, height: "100%"});
@@ -505,19 +523,6 @@ var __meta__ = { // jshint ignore:line
             that._toggleScrollButtons(backwardBtn, forwardBtn, isHorizontal);
         },
 
-        _mapMenuGroups: function() {
-            var that = this;
-            var menu = that.element;
-            var groupId = new Date().getTime();
-
-            menu.children()
-                .contents("ul.k-group.k-menu-group")
-                .each(function(){
-                    $(this).attr("data-group", groupId);
-                    $(this.parentNode).attr("data-groupParent", groupId);
-                    groupId++;
-                });
-        },
 
         _initScrolling: function(backwardBtn, forwardBtn, isHorizontal) {
             var that = this,
@@ -815,7 +820,7 @@ var __meta__ = { // jshint ignore:line
                                 position: directions.position,
                                 collision: options.popupCollision !== undefined ? options.popupCollision : (parentHorizontal ? "fit" : "fit flip"),
                                 anchor: li,
-                                appendTo: that._overflowWrapper ? (li.closest(".k-menu")[0] ? that._overflowWrapper : li) : li,
+                                appendTo: that._overflowWrapper || li,
                                 animation: {
                                     open: extend(true, { effects: openEffects }, options.animation.open),
                                     close: options.animation.close
@@ -859,6 +864,11 @@ var __meta__ = { // jshint ignore:line
                                         position: "absolute"
                                     });
                             }
+                            if (!li.attr("data-groupparent")) {
+                                var groupId = new Date().getTime();
+                                li.attr("data-groupparent", groupId);
+                                popup.element.attr("data-group", groupId);
+                            }
                         }
 
                         popup.open();
@@ -880,6 +890,18 @@ var __meta__ = { // jshint ignore:line
                 items = element.find(">.k-item");
             }
 
+            var hasChildPopupsHovered = function(currentPopup){
+                if ($.isEmptyObject(that._openedPopups)) {
+                    return false;
+                }
+                var result = false;
+                $(getChildPopups(currentPopup, that._overflowWrapper)).each(function(i, popup){
+                    result = !!that._openedPopups[popup.data("group").toString()];
+                    return !result;
+                });
+                return result;
+            };
+
             items.each(function () {
                 var li = $(this);
 
@@ -895,12 +917,16 @@ var __meta__ = { // jshint ignore:line
                         popupElement;
 
                     if (!popup && groupId) {
-                        popupElement = that._overflowWrapper.find("[data-group='" + groupId + "']");
+                        popupElement = that._overflowWrapper.find(popupGroupSelector(groupId));
                         popup = popupElement.data(KENDOPOPUP);
                     }
 
-                    if (popup && (!popupElement || (popupElement && !that._groupEntered[groupId.toString()]))) {
+                    if (popup && (!popupElement || (popupElement && !that._openedPopups[groupId.toString()]))) {
                         var popupParent = popupElement && popupElement.parent();
+                        if (hasChildPopupsHovered(popupElement)) {
+                            return;
+                        }
+
                         if (popupParent && popupParent.is("div.k-animation-container")) {
                             popupParent.appendTo(li);
                         }
@@ -1001,7 +1027,7 @@ var __meta__ = { // jshint ignore:line
             var group = element.data("groupparent") || element.parent().data("group");
 
             if (group) {
-                that._groupEntered[group.toString()] = true;
+                that._openedPopups[group.toString()] = true;
             }
 
             if (e.delegateTarget != element.parents(menuSelector)[0] && e.delegateTarget != element.parents(".k-menu-scroll-wrapper")[0]) {
@@ -1029,7 +1055,7 @@ var __meta__ = { // jshint ignore:line
 
             var group = element.data("groupparent");
             if (group) {
-                that._groupEntered[group.toString()] = undefined;
+                delete that._openedPopups[group.toString()];
                 return that.close(element);
             }
 
@@ -1054,11 +1080,10 @@ var __meta__ = { // jshint ignore:line
             var group = $(e.currentTarget);
             var groupId = group.data("group");
 
-
             if (!groupId) {
                 return;
             }
-            that._groupEntered[groupId.toString()] = true;
+            that._openedPopups[groupId.toString()] = true;
         },
 
         _mouseleaveGroup: function (e) {
@@ -1067,9 +1092,36 @@ var __meta__ = { // jshint ignore:line
             var groupId = group.data("group");
 
             if (groupId) {
-                that._groupEntered[groupId.toString()] = undefined;
-                var groupParent = that._overflowWrapper.find("li[data-groupParent='" + groupId + "']");
-                that.close(groupParent);
+                delete that._openedPopups[groupId.toString()];
+                var groupParent = that._overflowWrapper.find(popupOpenerSelector(groupId));
+                setTimeout(function() {
+                    if ($.isEmptyObject(that._openedPopups)) {
+                        var innerPopup = that._innerPopup(group);
+                        that._closeParentPopups(innerPopup);
+                    } else {
+                        that.close(groupParent);
+                    }
+                }, 0);
+            }
+        },
+
+        _innerPopup: function(current) {
+            var popups = getChildPopups(current, this._overflowWrapper);
+            return popups[popups.length - 1] || current;
+        },
+        _closeParentPopups: function (current) {
+            var that = this;
+            var popupId = current.data("group");
+            var popupOpener = that._overflowWrapper.find(popupOpenerSelector(popupId));
+            popupId = popupOpener.parent().data("group");
+            that.close(popupOpener);
+            while (popupId && !that._openedPopups[popupId]) {
+                if (popupOpener.parent().is(menuSelector)) {
+                    break;
+                }
+                popupOpener = that._overflowWrapper.find(popupOpenerSelector(popupId));
+                that.close(popupOpener);
+                popupId = popupOpener.parent().data("group");
             }
         },
 
