@@ -519,14 +519,13 @@ var __meta__ = { // jshint ignore:line
             }
             backwardBtn.appendTo(that._overflowWrapper);
             forwardBtn.appendTo(that._overflowWrapper);
-            that._initScrolling(backwardBtn, forwardBtn, isHorizontal);
-            that._toggleScrollButtons(backwardBtn, forwardBtn, isHorizontal);
+            that._initScrolling(that.element, backwardBtn, forwardBtn, isHorizontal);
+            that._toggleScrollButtons(that.element, backwardBtn, forwardBtn, isHorizontal);
         },
 
 
-        _initScrolling: function(backwardBtn, forwardBtn, isHorizontal) {
+        _initScrolling: function(scrollElement, backwardBtn, forwardBtn, isHorizontal) {
             var that = this,
-                menu = that.element,
                 speed = that.options.scrollSpeed || 40,
                 backward = "-=" + speed,
                 forward = "+=" + speed,
@@ -534,12 +533,12 @@ var __meta__ = { // jshint ignore:line
 
             var scroll = function(value) {
                 var scrollValue = isHorizontal ? {"scrollLeft": value} : { "scrollTop": value };
-                menu.finish().animate(scrollValue, "fast", "linear", function () {
+                scrollElement.finish().animate(scrollValue, "fast", "linear", function () {
                     if (scrolling) {
                         scroll(value);
                     }
                 });
-                that._toggleScrollButtons(backwardBtn, forwardBtn, isHorizontal);
+                that._toggleScrollButtons(scrollElement, backwardBtn, forwardBtn, isHorizontal);
             };
 
             var mouseenterHandler = function(e) {
@@ -555,21 +554,20 @@ var __meta__ = { // jshint ignore:line
 
             backwardBtn.add(forwardBtn)
                 .on(MOUSELEAVE, function() {
-                    menu.stop();
+                    scrollElement.stop();
                     scrolling = false;
-                    that._toggleScrollButtons(backwardBtn, forwardBtn, isHorizontal);
+                    that._toggleScrollButtons(scrollElement, backwardBtn, forwardBtn, isHorizontal);
                 });
         },
 
-        _toggleScrollButtons: function(backwardBtn, forwardBtn, horizontal) {
+        _toggleScrollButtons: function(scrollElement, backwardBtn, forwardBtn, horizontal) {
             var that = this,
-                ul = that.element,
-                currentScroll = horizontal ? ul.scrollLeft() : ul.scrollTop(),
+                currentScroll = horizontal ? scrollElement.scrollLeft() : scrollElement.scrollTop(),
                 scrollSize = horizontal ? SCROLLWIDTH : SCROLLHEIGHT,
                 offset = horizontal ? OFFSETWIDTH : OFFSETHEIGHT;
 
-            backwardBtn.toggle(that._isRtl ? currentScroll < ul[0][scrollSize] - ul[0][offset] - 1 : currentScroll !== 0);
-            forwardBtn.toggle(that._isRtl ? currentScroll !== 0 : currentScroll < ul[0][scrollSize] - ul[0][offset] - 1);
+            backwardBtn.toggle(that._isRtl ? currentScroll < scrollElement[0][scrollSize] - scrollElement[0][offset] - 1 : currentScroll !== 0);
+            forwardBtn.toggle(that._isRtl ? currentScroll !== 0 : currentScroll < scrollElement[0][scrollSize] - scrollElement[0][offset] - 1);
         },
 
         setOptions: function(options) {
@@ -825,6 +823,7 @@ var __meta__ = { // jshint ignore:line
                                     open: extend(true, { effects: openEffects }, options.animation.open),
                                     close: options.animation.close
                                 },
+                                open: proxy(that._popupOpen, that),
                                 close: function (e) {
                                     var li = e.sender.wrapper.parent();
 
@@ -872,12 +871,50 @@ var __meta__ = { // jshint ignore:line
                         }
 
                         popup.open();
+
+                        if (that._overflowWrapper && popup.element[0].scrollHeight > popup.element[0].offsetHeight) {
+                            if (!popup.wrapper.children().filter(".k-button").length) {
+                                var animation = that.options.animation;
+                                var timeout = (animation && animation.open && animation.open.duration) || 0;
+                                setTimeout(function(){
+                                    var isHorizontal = false;
+                                    var backwardBtn = $(templates.scrollButton({direction: "up"})).css({top: 0,left: 0, width: "100%"});
+                                    var forwardBtn = $(templates.scrollButton({direction: "down"})).css({bottom: 0,left: 0, width: "100%"});
+                                    backwardBtn.appendTo(popup.wrapper);
+                                    forwardBtn.appendTo(popup.wrapper);
+                                    that._initScrolling(popup.element, backwardBtn, forwardBtn, isHorizontal);
+                                    that._toggleScrollButtons(popup.element, backwardBtn, forwardBtn, isHorizontal);
+                                    $(backwardBtn).add(forwardBtn)
+                                    .on(MOUSEENTER, function(){
+                                        that._openedPopups.scrolling = true;
+                                    })
+                                    .on(MOUSELEAVE, function(){
+                                        delete that._openedPopups.scrolling;
+                                    });
+                                }, timeout);
+                            }
+                        }
                     }
 
                 }, that.options.hoverDelay));
             });
 
             return that;
+        },
+
+        _popupOpen: function(e) {
+            var popup = e.sender.element;
+            var popups = popup.add(popup.parent(".k-animation-container")).show();
+
+            popup.show();
+            var windowHeight = $(window).height();
+            var popupOuterHeight = kendo._outerHeight(popup);
+            var maxHeight = windowHeight - (popupOuterHeight - popup.height()) - kendo.getShadows(popup).bottom;
+
+            popup.hide();
+            if (maxHeight < popupOuterHeight) {
+                popups.css({overflow: "hidden", height: maxHeight + "px"});
+            }
         },
 
         close: function (items, dontClearClose) {
@@ -923,7 +960,7 @@ var __meta__ = { // jshint ignore:line
 
                     if (popup && (!popupElement || (popupElement && !that._openedPopups[groupId.toString()]))) {
                         var popupParent = popupElement && popupElement.parent();
-                        if (hasChildPopupsHovered(popupElement)) {
+                        if (hasChildPopupsHovered(popupElement) || (that._openedPopups && that._openedPopups.scrolling)) {
                             return;
                         }
 
