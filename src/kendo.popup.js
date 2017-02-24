@@ -290,6 +290,46 @@ var __meta__ = { // jshint ignore:line
             }
         },
 
+        _vericalLocation: function() {
+            var that = this,
+                element = that.element,
+                options = that.options,
+                wrapper,
+                anchor = $(options.anchor),
+                mobile = element[0] && element.hasClass("km-widget");
+
+            if (options.copyAnchorStyles) {
+                if (mobile && styles[0] == "font-size") {
+                    styles.shift();
+                }
+                element.css(kendo.getComputedStyles(anchor[0], styles));
+            }
+
+            that.wrapper = wrapper = kendo.wrap(element, options.autosize)
+                                    .css({
+                                        overflow: HIDDEN,
+                                        display: "block",
+                                        position: ABSOLUTE
+                                    });
+
+            if (support.mobileOS.android) {
+                wrapper.css(TRANSFORM, "translatez(0)"); // Android is VERY slow otherwise. Should be tested in other droids as well since it may cause blur.
+            }
+
+            wrapper.css(POSITION);
+
+            if ($(options.appendTo)[0] == document.body) {
+                wrapper.css(TOP, "-10000px");
+            }
+
+            that._position({ isFixed: false });
+
+            return {
+                height: kendo._outerHeight(wrapper),
+                top: wrapper.offset().top
+            };
+        },
+
         _openAnimation: function() {
             var animation = extend(true, {}, this.options.animation.open);
             animation.effects = kendo.parseEffects(animation.effects, this.flipped);

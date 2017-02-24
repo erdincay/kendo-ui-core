@@ -17,6 +17,7 @@ var __meta__ = { // jshint ignore:line
         touch = (kendo.support.touch && kendo.support.mobileOS),
         MOUSEDOWN = "mousedown",
         CLICK = "click",
+        DELAY = 30,
         extend = $.extend,
         proxy = $.proxy,
         each = $.each,
@@ -433,9 +434,10 @@ var __meta__ = { // jshint ignore:line
                        MOUSEDOWN + NS + " " + CLICK + NS, linkSelector, proxy(that._toggleHover, that));
 
             if (this._overflowWrapper) {
-                this._overflowWrapper.find("ul.k-menu-group")
-                    .on(MOUSELEAVE + NS, proxy(that._mouseleaveGroup, that))
-                    .on(MOUSEENTER + NS, proxy(that._mouseenterGroup, that));
+                var selectorPopup = "div.k-animation-container,ul.k-menu-group";
+                this._overflowWrapper
+                    .on(MOUSELEAVE + NS, selectorPopup, proxy(that._mouseleaveGroup, that))
+                    .on(MOUSEENTER + NS, selectorPopup, proxy(that._mouseenterGroup, that));
             }
 
             if (options.openOnClick) {
@@ -823,7 +825,7 @@ var __meta__ = { // jshint ignore:line
                                     open: extend(true, { effects: openEffects }, options.animation.open),
                                     close: options.animation.close
                                 },
-                                open: proxy(that._popupOpen, that),
+                                open: that._overflowWrapper ? proxy(that._popupOpen, that) : $.noop,
                                 close: function (e) {
                                     var li = e.sender.wrapper.parent();
 
@@ -869,15 +871,16 @@ var __meta__ = { // jshint ignore:line
                                 popup.element.attr("data-group", groupId);
                             }
                         }
+                        var scrollButtons = popup.wrapper.children().filter(".k-button");
 
                         popup.open();
 
                         if (that._overflowWrapper && popup.element[0].scrollHeight > popup.element[0].offsetHeight) {
-                            if (!popup.wrapper.children().filter(".k-button").length) {
-                                var animation = that.options.animation;
-                                var timeout = (animation && animation.open && animation.open.duration) || 0;
-                                setTimeout(function(){
-                                    var isHorizontal = false;
+                            var animation = that.options.animation;
+                            var timeout = ((animation && animation.open && animation.open.duration) || 0) + DELAY;
+                            var isHorizontal = false;
+                            setTimeout(function() {
+                                if (!scrollButtons.length) {
                                     var backwardBtn = $(templates.scrollButton({direction: "up"})).css({top: 0,left: 0, width: "100%"});
                                     var forwardBtn = $(templates.scrollButton({direction: "down"})).css({bottom: 0,left: 0, width: "100%"});
                                     backwardBtn.appendTo(popup.wrapper);
@@ -886,13 +889,24 @@ var __meta__ = { // jshint ignore:line
                                     that._toggleScrollButtons(popup.element, backwardBtn, forwardBtn, isHorizontal);
                                     $(backwardBtn).add(forwardBtn)
                                     .on(MOUSEENTER, function(){
-                                        that._openedPopups.scrolling = true;
+                                        that._openedPopups.scrolling = popup.element.data("group");
+                                        $(getChildPopups(popup.element, that._overflowWrapper)).each(function(i, p){
+                                            var popupOpener = that._overflowWrapper.find(popupOpenerSelector(p.data("group")));
+                                            that.close(popupOpener);
+                                        });
                                     })
                                     .on(MOUSELEAVE, function(){
                                         delete that._openedPopups.scrolling;
+                                        setTimeout(function(){
+                                            if ($.isEmptyObject(that._openedPopups)) {
+                                                that._closeParentPopups(popup.element);
+                                            }
+                                        }, DELAY);
                                     });
-                                }, timeout);
-                            }
+                                } else {
+                                    that._toggleScrollButtons(popup.element, scrollButtons.first(), scrollButtons.last(), isHorizontal);
+                                }
+                            }, timeout);
                         }
                     }
 
@@ -903,17 +917,18 @@ var __meta__ = { // jshint ignore:line
         },
 
         _popupOpen: function(e) {
-            var popup = e.sender.element;
-            var popups = popup.add(popup.parent(".k-animation-container")).show();
-
-            popup.show();
+            var popup = e.sender;
+            var popupElement = popup.element;
+            var location = popup._vericalLocation();
+            var popups = popupElement.add(popupElement.parent(".k-animation-container"));
             var windowHeight = $(window).height();
-            var popupOuterHeight = kendo._outerHeight(popup);
-            var maxHeight = windowHeight - (popupOuterHeight - popup.height()) - kendo.getShadows(popup).bottom;
+            var popupOuterHeight = location.height;
+            var popupOffsetTop = Math.max(location.top, 0);
+            var maxHeight = windowHeight - kendo.getShadows(popupElement).bottom;
+            var canFit = maxHeight > popupOuterHeight + popupOffsetTop;
 
-            popup.hide();
-            if (maxHeight < popupOuterHeight) {
-                popups.css({overflow: "hidden", height: maxHeight + "px"});
+            if (!canFit) {
+                popups.css({overflow: "hidden", height: (maxHeight - popupOffsetTop) + "px"});
             }
         },
 
@@ -960,15 +975,22 @@ var __meta__ = { // jshint ignore:line
 
                     if (popup && (!popupElement || (popupElement && !that._openedPopups[groupId.toString()]))) {
                         var popupParent = popupElement && popupElement.parent();
-                        if (hasChildPopupsHovered(popupElement) || (that._openedPopups && that._openedPopups.scrolling)) {
+                        if (hasChildPopupsHovered(popupElement) || (that._openedPopups && that._openedPopups.scrolling && popupElement.data("group") == that._openedPopups.scrolling)) {
                             return;
                         }
 
-                        if (popupParent && popupParent.is("div.k-animation-container")) {
-                            popupParent.appendTo(li);
-                        }
+                        popup.wrapper.children().filter(".k-button").hide();
+
                         popup.close();
                         popup.element.attr("aria-hidden", true);
+
+                        var animation = popup.options.animation;
+                        var timeout = ((animation && animation.close && animation.close.duration) || 0) + DELAY;
+                        setTimeout(function(){
+                            if (popupParent && popupParent.is("div.k-animation-container")) {
+                                popupParent.appendTo(li);
+                            }
+                        }, timeout);
                     }
                 }, that.options.hoverDelay));
             });
@@ -1117,6 +1139,13 @@ var __meta__ = { // jshint ignore:line
             var group = $(e.currentTarget);
             var groupId = group.data("group");
 
+            if (group.parent().is(".k-animation-container")) {
+                 return;
+            }
+
+            group = group.children("ul");
+            groupId = group.data("group");
+
             if (!groupId) {
                 return;
             }
@@ -1127,6 +1156,13 @@ var __meta__ = { // jshint ignore:line
             var that = this;
             var group = $(e.currentTarget);
             var groupId = group.data("group");
+
+            if (group.parent().is(".k-animation-container")) {
+                 return;
+            }
+
+            group = group.children("ul");
+            groupId = group.data("group");
 
             if (groupId) {
                 delete that._openedPopups[groupId.toString()];
