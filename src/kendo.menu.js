@@ -71,6 +71,7 @@ var __meta__ = { // jshint ignore:line
         nextSelector = exclusionSelector + ":eq(0)",
         lastSelector = exclusionSelector + ":last",
         templateSelector = "div:not(.k-animation-container,.k-list-container)",
+        scrollButtonSelector = ".k-menu-scroll-button",
         touchPointerTypes = { "2": 1, "touch": 1 },
 
         templates = {
@@ -100,7 +101,7 @@ var __meta__ = { // jshint ignore:line
                 "</li>"
             ),
             scrollButton: template(
-                "<span class='k-button k-button-icon' style='position:absolute;display:none;' unselectable='on'>" +
+                "<span class='k-button k-button-icon k-menu-scroll-button k-scroll-#= direction #' unselectable='on'>" +
                 "<span class='k-icon k-i-arrow-60-#= direction #'></span></span>"
             ),
             image: template("<img #= imageCssAttributes(item) # alt='' src='#= item.imageUrl #' />"), // class='k-image'
@@ -503,37 +504,45 @@ var __meta__ = { // jshint ignore:line
         },
 
         _initOverflow: function(options) {
+            var that = this;
+            var isHorizontal = options.orientation == "horizontal";
+            var backwardBtn, forwardBtn;
+
+            that._destroyOverflow();
+
             if (!options.overflow) {
                 return;
             }
 
-            var that = this;
-            var isHorizontal = options.orientation == "horizontal";
-            var backwardBtn, forwardBtn;
             that._openedPopups = {};
             that._isRtl = kendo.support.isRtl(that.wrapper);
             that._overflowWrapper = that.element.wrap("<div class='k-menu-scroll-wrapper " + options.orientation + "'></div>").parent();
 
-            if (isHorizontal) {
-                backwardBtn = $(templates.scrollButton({direction: "left"})).css({top: 0, left: 0, height: "100%"});
-                forwardBtn = $(templates.scrollButton({direction: "right"})).css({top: 0, right: 0, height: "100%"});
-            } else {
-                backwardBtn = $(templates.scrollButton({direction: "up"})).css({top: 0,left: 0, width: "100%"});
-                forwardBtn = $(templates.scrollButton({direction: "down"})).css({bottom: 0,left: 0, width: "100%"});
-            }
-            backwardBtn.appendTo(that._overflowWrapper);
-            forwardBtn.appendTo(that._overflowWrapper);
+            backwardBtn = $(templates.scrollButton({direction: isHorizontal ? "left" : "up"}));
+            forwardBtn = $(templates.scrollButton({direction: isHorizontal ? "right": "down"}));
+            backwardBtn.add(forwardBtn).appendTo(that._overflowWrapper);
+
             that._initScrolling(that.element, backwardBtn, forwardBtn, isHorizontal);
             that._toggleScrollButtons(that.element, backwardBtn, forwardBtn, isHorizontal);
         },
 
+        _destroyOverflow: function() {
+            var that = this;
+            if(that._overflowWrapper) {
+                that._overflowWrapper.find(scrollButtonSelector).off(NS).remove();
+                that._overflowWrapper.find(popupOpenerSelector()).removeAttr("data-groupparent");
+                that._overflowWrapper.find(popupGroupSelector()).removeAttr("data-group");
+                that.element.unwrap();
+                delete that._openedPopups;
+            }
+        },
 
         _initScrolling: function(scrollElement, backwardBtn, forwardBtn, isHorizontal) {
-            var that = this,
-                speed = that.options.scrollSpeed || 40,
-                backward = "-=" + speed,
-                forward = "+=" + speed,
-                scrolling = false;
+            var that = this;
+            var speed = that.options.scrollSpeed || 40;
+            var backward = "-=" + speed;
+            var forward = "+=" + speed;
+            var scrolling = false;
 
             var scroll = function(value) {
                 var scrollValue = isHorizontal ? {"scrollLeft": value} : { "scrollTop": value };
@@ -553,11 +562,11 @@ var __meta__ = { // jshint ignore:line
                 e.stopPropagation();
             };
 
-            backwardBtn.on(MOUSEENTER, {direction: that._isRtl ? forward : backward}, mouseenterHandler);
-            forwardBtn.on(MOUSEENTER, {direction: that._isRtl ? backward : forward}, mouseenterHandler);
+            backwardBtn.on(MOUSEENTER + NS, {direction: that._isRtl ? forward : backward}, mouseenterHandler);
+            forwardBtn.on(MOUSEENTER + NS, {direction: that._isRtl ? backward : forward}, mouseenterHandler);
 
             backwardBtn.add(forwardBtn)
-                .on(MOUSELEAVE, function() {
+                .on(MOUSELEAVE + NS, function() {
                     scrollElement.stop();
                     scrolling = false;
                     that._toggleScrollButtons(scrollElement, backwardBtn, forwardBtn, isHorizontal);
@@ -565,10 +574,10 @@ var __meta__ = { // jshint ignore:line
         },
 
         _toggleScrollButtons: function(scrollElement, backwardBtn, forwardBtn, horizontal) {
-            var that = this,
-                currentScroll = horizontal ? scrollElement.scrollLeft() : scrollElement.scrollTop(),
-                scrollSize = horizontal ? SCROLLWIDTH : SCROLLHEIGHT,
-                offset = horizontal ? OFFSETWIDTH : OFFSETHEIGHT;
+            var that = this;
+            var currentScroll = horizontal ? scrollElement.scrollLeft() : scrollElement.scrollTop();
+            var scrollSize = horizontal ? SCROLLWIDTH : SCROLLHEIGHT;
+            var offset = horizontal ? OFFSETWIDTH : OFFSETHEIGHT;
 
             backwardBtn.toggle(that._isRtl ? currentScroll < scrollElement[0][scrollSize] - scrollElement[0][offset] - 1 : currentScroll !== 0);
             forwardBtn.toggle(that._isRtl ? currentScroll !== 0 : currentScroll < scrollElement[0][scrollSize] - scrollElement[0][offset] - 1);
@@ -586,6 +595,7 @@ var __meta__ = { // jshint ignore:line
             }
 
             this._updateClasses();
+            this._initOverflow(options);
 
             Widget.fn.setOptions.call(this, options);
         },
@@ -600,6 +610,8 @@ var __meta__ = { // jshint ignore:line
             if (that._documentClickHandler) {
                 $(document).unbind("click", that._documentClickHandler);
             }
+
+            that._destroyOverflow();
 
             kendo.destroy(that.element);
         },
@@ -858,70 +870,81 @@ var __meta__ = { // jshint ignore:line
                         }
                         ul.removeAttr("aria-hidden");
 
-                        if (that._overflowWrapper) {
-                            if (popup.wrapper.length &&
-                                $(popup.options.appendTo).is(that._overflowWrapper) && !popup.wrapper.parent().is(that._overflowWrapper)) {
-                                popup.wrapper.appendTo(that._overflowWrapper);
-                            }
-
-                            //when menu direction is top and the popup is opened for the first time popup height is not calculated properly and its position is wrong
-                            if (popup.element.parent().is(that._overflowWrapper)) {
-                                kendo.wrap(popup.element, popup.options.autosize)
-                                    .css({
-                                        overflow: "hidden",
-                                        display: "block",
-                                        position: "absolute"
-                                    });
-                            }
-                            if (!li.attr("data-groupparent")) {
-                                var groupId = new Date().getTime();
-                                li.attr("data-groupparent", groupId);
-                                popup.element.attr("data-group", groupId);
-                            }
-                        }
-                        var scrollButtons = popup.wrapper.children().filter(".k-button");
+                        that._configurePopupOverflow(popup, li);
 
                         popup.open();
 
-                        if (that._overflowWrapper && popup.element[0].scrollHeight > popup.element[0].offsetHeight) {
-                            var animation = that.options.animation;
-                            var timeout = ((animation && animation.open && animation.open.duration) || 0) + DELAY;
-                            var isHorizontal = false;
-                            setTimeout(function() {
-                                if (!scrollButtons.length) {
-                                    var backwardBtn = $(templates.scrollButton({direction: "up"})).css({top: 0,left: 0, width: "100%"});
-                                    var forwardBtn = $(templates.scrollButton({direction: "down"})).css({bottom: 0,left: 0, width: "100%"});
-                                    backwardBtn.appendTo(popup.wrapper);
-                                    forwardBtn.appendTo(popup.wrapper);
-                                    that._initScrolling(popup.element, backwardBtn, forwardBtn, isHorizontal);
-                                    that._toggleScrollButtons(popup.element, backwardBtn, forwardBtn, isHorizontal);
-                                    $(backwardBtn).add(forwardBtn)
-                                    .on(MOUSEENTER, function(){
-                                        that._openedPopups.scrolling = popup.element.data(POPUP_ID_ATTR);
-                                        $(getChildPopups(popup.element, that._overflowWrapper)).each(function(i, p){
-                                            var popupOpener = that._overflowWrapper.find(popupOpenerSelector(p.data(POPUP_ID_ATTR)));
-                                            that.close(popupOpener);
-                                        });
-                                    })
-                                    .on(MOUSELEAVE, function(){
-                                        delete that._openedPopups.scrolling;
-                                        setTimeout(function(){
-                                            if ($.isEmptyObject(that._openedPopups)) {
-                                                that._closeParentPopups(popup.element);
-                                            }
-                                        }, DELAY);
-                                    });
-                                } else {
-                                    that._toggleScrollButtons(popup.element, scrollButtons.first(), scrollButtons.last(), isHorizontal);
-                                }
-                            }, timeout);
-                        }
+                        that._initPopupScrolling(popup);
                     }
 
                 }, that.options.hoverDelay));
             });
 
             return that;
+        },
+
+        _configurePopupOverflow: function(popup, popupOpener) {
+            var that = this;
+            if (that._overflowWrapper) {
+                if (popup.wrapper.length &&
+                    $(popup.options.appendTo).is(that._overflowWrapper) && !popup.wrapper.parent().is(that._overflowWrapper)) {
+                    popup.wrapper.appendTo(that._overflowWrapper);
+                }
+
+                //popup height is not calculated properly and its position is wrong when menu direction is top and the popup is opened for the first time
+                if (popup.element.parent().is(that._overflowWrapper)) {
+                    kendo.wrap(popup.element, popup.options.autosize)
+                        .css({
+                            overflow: "hidden",
+                            display: "block",
+                            position: "absolute"
+                        });
+                }
+                if (!popupOpener.attr("data-groupparent")) {
+                    var groupId = new Date().getTime();
+                    popupOpener.attr("data-groupparent", groupId);
+                    popup.element.attr("data-group", groupId);
+                }
+            }
+        },
+
+        _initPopupScrolling: function(popup) {
+            var that = this;
+            var scrollButtons = popup.wrapper.children().filter(scrollButtonSelector);
+
+            if (that._overflowWrapper && popup.element[0].scrollHeight > popup.element[0].offsetHeight) {
+                var animation = that.options.animation;
+                var timeout = ((animation && animation.open && animation.open.duration) || 0) + DELAY;
+                var isHorizontal = false;
+                setTimeout(function() {
+                    if (!scrollButtons.length) {
+                        var backwardBtn = $(templates.scrollButton({direction: "up"}));
+                        var forwardBtn = $(templates.scrollButton({direction: "down"}));
+                        scrollButtons = backwardBtn.add(forwardBtn).appendTo(popup.wrapper);
+
+                        that._initScrolling(popup.element, backwardBtn, forwardBtn, isHorizontal);
+                        that._toggleScrollButtons(popup.element, backwardBtn, forwardBtn, isHorizontal);
+
+                        scrollButtons.on(MOUSEENTER + NS, function() {
+                            that._openedPopups.scrolling = popup.element.data(POPUP_ID_ATTR);
+                            $(getChildPopups(popup.element, that._overflowWrapper)).each(function(i, p){
+                                var popupOpener = that._overflowWrapper.find(popupOpenerSelector(p.data(POPUP_ID_ATTR)));
+                                that.close(popupOpener);
+                            });
+                        })
+                        .on(MOUSELEAVE + NS, function(){
+                            delete that._openedPopups.scrolling;
+                            setTimeout(function(){
+                                if ($.isEmptyObject(that._openedPopups)) {
+                                    that._closeParentPopups(popup.element);
+                                }
+                            }, DELAY);
+                        });
+                    } else {
+                        that._toggleScrollButtons(popup.element, scrollButtons.first(), scrollButtons.last(), isHorizontal);
+                    }
+                }, timeout);
+            }
         },
 
         _popupOpen: function(e) {
@@ -953,15 +976,24 @@ var __meta__ = { // jshint ignore:line
             }
 
             var hasChildPopupsHovered = function(currentPopup){
-                if ($.isEmptyObject(that._openedPopups)) {
-                    return false;
-                }
                 var result = false;
+                if ($.isEmptyObject(that._openedPopups)) {
+                    return result;
+                }
                 $(getChildPopups(currentPopup, that._overflowWrapper)).each(function(i, popup){
                     result = !!that._openedPopups[popup.data(POPUP_ID_ATTR).toString()];
                     return !result;
                 });
                 return result;
+            };
+
+            var isScrolling = function(popupElement) {
+                return that._openedPopups && that._openedPopups.scrolling && popupElement.data(POPUP_ID_ATTR) == that._openedPopups.scrolling;
+            };
+
+            var isPopupMouseLeaved = function(opener) {
+                var groupId = opener.data(POPUP_OPENER_ATTR);
+                return (!that._overflowWrapper || !groupId || !that._openedPopups[groupId.toString()]);
             };
 
             items.each(function () {
@@ -974,33 +1006,20 @@ var __meta__ = { // jshint ignore:line
                 clearTimeout(li.data(TIMER));
 
                 li.data(TIMER, setTimeout(function () {
-                    var popup = li.find(".k-menu-group:not(.k-list-container):not(.k-calendar-container):first:visible").data(KENDOPOPUP),
-                        groupId = li.data(POPUP_OPENER_ATTR),
-                        popupElement;
-
-                    if (!popup && groupId) {
-                        popupElement = that._overflowWrapper.find(popupGroupSelector(groupId));
-                        popup = popupElement.data(KENDOPOPUP);
-                    }
-
-                    if (popup && (!popupElement || (popupElement && !that._openedPopups[groupId.toString()]))) {
-                        var popupParent = popupElement && popupElement.parent();
-                        if (hasChildPopupsHovered(popupElement) || (that._openedPopups && that._openedPopups.scrolling && popupElement.data(POPUP_ID_ATTR) == that._openedPopups.scrolling)) {
+                    var popup = that._getPopup(li);
+                    if (popup && isPopupMouseLeaved(li)) {
+                        if (hasChildPopupsHovered(popup.element) || isScrolling(popup.element)) {
                             return;
                         }
 
-                        popup.wrapper.children().filter(".k-button").hide();
+                        popup.wrapper.children().filter(scrollButtonSelector).hide();
 
                         popup.close();
                         popup.element.attr("aria-hidden", true);
 
-                        var animation = popup.options.animation;
-                        var timeout = ((animation && animation.close && animation.close.duration) || 0) + DELAY;
-                        setTimeout(function(){
-                            if (popupParent && popupParent.is(animationContainerSelector)) {
-                                popupParent.appendTo(li);
-                            }
-                        }, timeout);
+                        if (that._overflowWrapper) {
+                            that._appendToItem(popup, li);
+                        }
                     }
                 }, that.options.hoverDelay));
             });
@@ -1008,6 +1027,30 @@ var __meta__ = { // jshint ignore:line
             return that;
         },
 
+        _getPopup: function(li) {
+            var that = this;
+            var popup = li.find(".k-menu-group:not(.k-list-container):not(.k-calendar-container):first:visible").data(KENDOPOPUP);
+
+            if (!popup && that._overflowWrapper) {
+                var groupId = li.data(POPUP_OPENER_ATTR);
+                if (groupId) {
+                    var popupElement = that._overflowWrapper.find(popupGroupSelector(groupId));
+                    popup = popupElement.data(KENDOPOPUP);
+                }
+            }
+            return popup;
+        },
+
+        _appendToItem: function(popup, li) {
+            var animation = popup.options.animation;
+            var timeout = ((animation && animation.close && animation.close.duration) || 0) + DELAY;
+            setTimeout(function(){
+                var popupParent = popup.element.parent();
+                if (popupParent.is(animationContainerSelector)) {
+                    popupParent.appendTo(li);
+                }
+            }, timeout);
+        },
         _toggleDisabled: function (items, enable) {
             this.element.find(items).each(function () {
                 $(this)
@@ -1089,14 +1132,13 @@ var __meta__ = { // jshint ignore:line
         },
 
         _mouseenter: function (e) {
-            var that = this,
-                element = $(e.currentTarget),
-                hasChildren = (element.children(animationContainerSelector).length || element.children(groupSelector).length) || !!element.data(POPUP_OPENER_ATTR);
+            var that = this;
+            var element = $(e.currentTarget);
+            var hasChildren = (element.children(animationContainerSelector).length || element.children(groupSelector).length) || !!element.data(POPUP_OPENER_ATTR);
+            var popupId = element.data(POPUP_OPENER_ATTR) || element.parent().data(POPUP_ID_ATTR);
 
-            var group = element.data(POPUP_OPENER_ATTR) || element.parent().data(POPUP_ID_ATTR);
-
-            if (group) {
-                that._openedPopups[group.toString()] = true;
+            if (popupId) {
+                that._openedPopups[popupId.toString()] = true;
             }
 
             if (e.delegateTarget != element.parents(menuSelector)[0] && e.delegateTarget != element.parents(".k-menu-scroll-wrapper")[0]) {
@@ -1118,10 +1160,10 @@ var __meta__ = { // jshint ignore:line
         },
 
         _mouseleave: function (e) {
-            var that = this,
-                element = $(e.currentTarget),
-                popupOpener = element.data(POPUP_OPENER_ATTR),
-                hasChildren = (element.children(animationContainerSelector).length || element.children(groupSelector).length) || popupOpener;
+            var that = this;
+            var element = $(e.currentTarget);
+            var popupOpener = element.data(POPUP_OPENER_ATTR);
+            var hasChildren = (element.children(animationContainerSelector).length || element.children(groupSelector).length) || popupOpener;
 
             if (popupOpener) {
                 delete that._openedPopups[popupOpener.toString()];
@@ -1142,63 +1184,76 @@ var __meta__ = { // jshint ignore:line
         _mouseenterPopup: function(e){
             var that = this;
             var popupElement = $(e.currentTarget);
-            var popupId = popupElement.data(POPUP_ID_ATTR);
 
             if (popupElement.parent().is(animationContainerSelector)) {
                  return;
             }
 
             popupElement = popupElement.children("ul");
-            popupId = popupElement.data(POPUP_ID_ATTR);
+            var popupId = popupElement.data(POPUP_ID_ATTR);
 
-            if (!popupId) {
-                return;
+            if (popupId) {
+                that._openedPopups[popupId.toString()] = true;
             }
-            that._openedPopups[popupId.toString()] = true;
         },
 
         _mouseleavePopup: function (e) {
             var that = this;
             var popupElement = $(e.currentTarget);
-            var popupId = popupElement.data(POPUP_ID_ATTR);
 
-            if (popupElement.parent().is(animationContainerSelector)) {
-                 return;
+            if (!popupElement.parent().is(animationContainerSelector)) {
+                that._closePopups(popupElement.children("ul"));
             }
+        },
 
-            popupElement = popupElement.children("ul");
-            popupId = popupElement.data(POPUP_ID_ATTR);
+        _closePopups: function(rootPopup) {
+            var that = this;
+            var popupId = rootPopup.data(POPUP_ID_ATTR);
 
             if (popupId) {
                 delete that._openedPopups[popupId.toString()];
                 var groupParent = that._overflowWrapper.find(popupOpenerSelector(popupId));
+
                 setTimeout(function() {
-                    if ($.isEmptyObject(that._openedPopups)) {
-                        var innerPopup = that._innerPopup(popupElement);
-                        that._closeParentPopups(innerPopup);
+                    if (that.options.openOnClick) {
+                        that._closeChildPopups(rootPopup);
                     } else {
-                        that.close(groupParent);
+                        if ($.isEmptyObject(that._openedPopups)) {
+                            var innerPopup = that._innerPopup(rootPopup);
+                            that._closeParentPopups(innerPopup);
+                        } else {
+                            that.close(groupParent, true);
+                        }
                     }
                 }, 0);
             }
+        },
+
+        _closeChildPopups: function(current){
+            var that = this;
+            $(getChildPopups(current, that._overflowWrapper)).each(function(){
+                var popupOpener = that._overflowWrapper.find(popupOpenerSelector(this.data(POPUP_ID_ATTR)));
+                that.close(popupOpener, true);
+            });
         },
 
         _innerPopup: function(current) {
             var popups = getChildPopups(current, this._overflowWrapper);
             return popups[popups.length - 1] || current;
         },
+
         _closeParentPopups: function (current) {
             var that = this;
             var popupId = current.data(POPUP_ID_ATTR);
             var popupOpener = that._overflowWrapper.find(popupOpenerSelector(popupId));
             popupId = popupOpener.parent().data(POPUP_ID_ATTR);
-            that.close(popupOpener);
+            that.close(popupOpener, true);
             while (popupId && !that._openedPopups[popupId]) {
                 if (popupOpener.parent().is(menuSelector)) {
                     break;
                 }
                 popupOpener = that._overflowWrapper.find(popupOpenerSelector(popupId));
-                that.close(popupOpener);
+                that.close(popupOpener, true);
                 popupId = popupOpener.parent().data(POPUP_ID_ATTR);
             }
         },
@@ -1219,7 +1274,7 @@ var __meta__ = { // jshint ignore:line
                 isLink = (!!href && href !== sampleHref),
                 isLocalLink = isLink && !!href.match(/^#/),
                 isTargetLink = (!!targetHref && targetHref !== sampleHref),
-                shouldCloseTheRootItem = (options.openOnClick && childGroupVisible && that._isRootItem(element));
+                shouldCloseTheRootItem;
 
             while (targetElement && targetElement.parentNode != itemElement) {
                 targetElement = targetElement.parentNode;
@@ -1241,7 +1296,14 @@ var __meta__ = { // jshint ignore:line
             e.handled = true;
 
             childGroup = element.children(popupSelector);
+            if (that._overflowWrapper) {
+                var childPopupId = element.data(POPUP_OPENER_ATTR);
+                if (childPopupId) {
+                    childGroup = that._overflowWrapper.find(popupGroupSelector(childPopupId));
+                }
+            }
             childGroupVisible = childGroup.is(":visible");
+            shouldCloseTheRootItem = options.openOnClick && childGroupVisible && that._isRootItem(element);
 
             if (options.closeOnClick && (!isLink || isLocalLink) && (!childGroup.length || shouldCloseTheRootItem)) {
                 element.removeClass(HOVERSTATE).css("height"); // Force refresh for Chrome

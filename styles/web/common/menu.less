@@ -222,8 +222,7 @@ ul.k-menu-vertical .k-separator,
     border-width: 1px 0 0;
 }
 
-.k-menu-scroll-wrapper .k-widget.k-menu
-{
+.k-menu-scroll-wrapper .k-widget.k-menu {
     white-space: nowrap;
     overflow: hidden;
 }
@@ -233,28 +232,56 @@ ul.k-menu-vertical .k-separator,
     box-sizing: border-box;
 }
 
-.k-menu-scroll-wrapper.horizontal .k-menu.k-menu-horizontal > .k-item
-{
+.k-menu-scroll-wrapper.horizontal .k-menu.k-menu-horizontal > .k-item {
     display: inline-block;
     overflow: hidden;
     float: none;
 }
-.k-menu-scroll-wrapper.vertical .k-menu.k-menu-vertical > .k-item
-{
+
+.k-menu-scroll-wrapper.vertical .k-menu.k-menu-vertical > .k-item {
     overflow: hidden;
 }
 
-.k-menu-scroll-wrapper
-{
+.k-menu-scroll-wrapper {
     position: relative;
 }
-.k-menu-scroll-wrapper.vertical
-{
+
+.k-menu-scroll-wrapper.vertical {
     height: 100%;
 }
-.k-menu-scroll-wrapper > .k-animation-container .k-item
-{
+.k-menu-scroll-wrapper > .k-animation-container .k-item {
     float: none;
+}
+
+.k-menu-scroll-wrapper {
+    .k-menu-scroll-button {
+        position: absolute;
+        display: none;
+    }
+
+    .k-scroll-up {
+        top: 0;
+        left: 0;
+        width: 100%;
+    }
+
+    .k-scroll-down {
+        bottom: 0;
+        left: 0;
+        width: 100%;
+    }
+
+    .k-scroll-left {
+        top: 0;
+        left: 0;
+        height: 100%;
+    }
+
+    .k-scroll-right {
+        top: 0;
+        right: 0;
+        height: 100%;
+    }
 }
 
 /* Context Menu */
