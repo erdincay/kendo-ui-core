@@ -421,32 +421,10 @@ var __meta__ = { // jshint ignore:line
 
             that._initOverflow(options);
 
-            that._focusProxy = proxy(that._focusHandler, that);
-
-            (this._overflowWrapper || element).on(POINTERDOWN, itemSelector, that._focusProxy)
-                   .on(CLICK + NS, disabledSelector, false)
-                   .on(CLICK + NS, itemSelector, proxy(that._click , that))
-                   .on("keydown" + NS, proxy(that._keydown, that))
-                   .on("focus" + NS, proxy(that._focus, that))
-                   .on("focus" + NS, ".k-content", proxy(that._focus, that))
-                   .on(POINTERDOWN + " " + MOUSEDOWN + NS, ".k-content", proxy(that._preventClose, that))
-                   .on("blur" + NS, proxy(that._removeHoverItem, that))
-                   .on("blur" + NS, "[tabindex]", proxy(that._checkActiveElement, that))
-                   .on(MOUSEENTER + NS, itemSelector, proxy(that._mouseenter, that))
-                   .on(MOUSELEAVE + NS, itemSelector, proxy(that._mouseleave, that))
-                   .on(MOUSEENTER + NS + " " + MOUSELEAVE + NS + " " +
-                       MOUSEDOWN + NS + " " + CLICK + NS, linkSelector, proxy(that._toggleHover, that));
-
-            if (this._overflowWrapper) {
-                this._overflowWrapper
-                    .on(MOUSELEAVE + NS, popupSelector, proxy(that._mouseleavePopup, that))
-                    .on(MOUSEENTER + NS, popupSelector, proxy(that._mouseenterPopup, that));
-            }
+            that._attachMenuEventsHandlers();
 
             if (options.openOnClick) {
                 that.clicked = false;
-                that._documentClickHandler = proxy(that._documentClick, that);
-                $(document).click(that._documentClickHandler);
             }
 
             element.attr("role", "menubar");
@@ -503,32 +481,83 @@ var __meta__ = { // jshint ignore:line
             }
         },
 
+        _attachMenuEventsHandlers: function() {
+            var that = this;
+            var element = that.element;
+            var options = that.options;
+            var overflowWrapper = that._overflowWrapper;
+
+            (overflowWrapper || element).on(POINTERDOWN, itemSelector, proxy(that._focusHandler, that))
+                   .on(CLICK + NS, disabledSelector, false)
+                   .on(CLICK + NS, itemSelector, proxy(that._click , that))
+                   .on("keydown" + NS, proxy(that._keydown, that))
+                   .on("focus" + NS, proxy(that._focus, that))
+                   .on("focus" + NS, ".k-content", proxy(that._focus, that))
+                   .on(POINTERDOWN + " " + MOUSEDOWN + NS, ".k-content", proxy(that._preventClose, that))
+                   .on("blur" + NS, proxy(that._removeHoverItem, that))
+                   .on("blur" + NS, "[tabindex]", proxy(that._checkActiveElement, that))
+                   .on(MOUSEENTER + NS, itemSelector, proxy(that._mouseenter, that))
+                   .on(MOUSELEAVE + NS, itemSelector, proxy(that._mouseleave, that))
+                   .on(MOUSEENTER + NS + " " + MOUSELEAVE + NS + " " +
+                       MOUSEDOWN + NS + " " + CLICK + NS, linkSelector, proxy(that._toggleHover, that));
+
+            if (overflowWrapper) {
+                overflowWrapper
+                    .on(MOUSELEAVE + NS, popupSelector, proxy(that._mouseleavePopup, that))
+                    .on(MOUSEENTER + NS, popupSelector, proxy(that._mouseenterPopup, that));
+            }
+
+            if (options.openOnClick) {
+                that._documentClickHandler = proxy(that._documentClick, that);
+                $(document).click(that._documentClickHandler);
+            }
+        },
+
+        _detachMenuEventsHandlers: function() {
+            var that = this;
+            (that._overflowWrapper || that.element).off(NS);
+
+            if (that._documentClickHandler) {
+                $(document).unbind("click", that._documentClickHandler);
+            }
+        },
+
         _initOverflow: function(options) {
             var that = this;
             var isHorizontal = options.orientation == "horizontal";
             var backwardBtn, forwardBtn;
 
-            that._destroyOverflow();
+            if (options.overflow) {
+                that._openedPopups = {};
+                that._isRtl = kendo.support.isRtl(that.wrapper);
+                that._overflowWrapper = that.element.wrap("<div class='k-menu-scroll-wrapper " + options.orientation + "'></div>").parent();
 
-            if (!options.overflow) {
-                return;
+                backwardBtn = $(templates.scrollButton({direction: isHorizontal ? "left" : "up"}));
+                forwardBtn = $(templates.scrollButton({direction: isHorizontal ? "right": "down"}));
+                backwardBtn.add(forwardBtn).appendTo(that._overflowWrapper);
+
+                that._initScrolling(that.element, backwardBtn, forwardBtn, isHorizontal);
+                that._toggleScrollButtons(that.element, backwardBtn, forwardBtn, isHorizontal);
             }
+        },
 
-            that._openedPopups = {};
-            that._isRtl = kendo.support.isRtl(that.wrapper);
-            that._overflowWrapper = that.element.wrap("<div class='k-menu-scroll-wrapper " + options.orientation + "'></div>").parent();
+        _reinitOverflow: function(options) {
+            var that = this;
+            var overflowChanged = options.overflow != that.options.overflow || options.orientation != that.options.orientation;
 
-            backwardBtn = $(templates.scrollButton({direction: isHorizontal ? "left" : "up"}));
-            forwardBtn = $(templates.scrollButton({direction: isHorizontal ? "right": "down"}));
-            backwardBtn.add(forwardBtn).appendTo(that._overflowWrapper);
+            if (overflowChanged) {
+                that._destroyOverflow();
+                that._initOverflow(options);
 
-            that._initScrolling(that.element, backwardBtn, forwardBtn, isHorizontal);
-            that._toggleScrollButtons(that.element, backwardBtn, forwardBtn, isHorizontal);
+                that._detachMenuEventsHandlers();
+                that._attachMenuEventsHandlers();
+            }
         },
 
         _destroyOverflow: function() {
             var that = this;
             if(that._overflowWrapper) {
+                that._overflowWrapper.off(NS);
                 that._overflowWrapper.find(scrollButtonSelector).off(NS).remove();
                 that._overflowWrapper.find(popupOpenerSelector()).removeAttr("data-groupparent");
                 that._overflowWrapper.find(popupGroupSelector()).removeAttr("data-group");
@@ -595,7 +624,7 @@ var __meta__ = { // jshint ignore:line
             }
 
             this._updateClasses();
-            this._initOverflow(options);
+            this._reinitOverflow(options);
 
             Widget.fn.setOptions.call(this, options);
         },
@@ -605,11 +634,7 @@ var __meta__ = { // jshint ignore:line
 
             Widget.fn.destroy.call(that);
 
-            that.element.off(NS);
-
-            if (that._documentClickHandler) {
-                $(document).unbind("click", that._documentClickHandler);
-            }
+            that._detachMenuEventsHandlers();
 
             that._destroyOverflow();
 

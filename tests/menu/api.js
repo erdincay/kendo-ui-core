@@ -370,6 +370,25 @@ test('overflow menu - setOptions reinitialize overflow wrapper', function() {
     m.destroy();
 });
 
+test('overflow menu - setOptions reattach events', function() {
+    var m = new kendo.ui.Menu("<div />");
+
+    var detachEventsCalled = false;
+    var attachEventsCalled = false;
+
+    mockFunc(kendo.ui.Menu.fn, "_detachMenuEventsHandlers", function() { detachEventsCalled = true; });
+    mockFunc(kendo.ui.Menu.fn, "_attachMenuEventsHandlers", function() { attachEventsCalled = true; });
+
+    m.setOptions({ overflow: true, orientation: "horizontal" });
+
+    ok(detachEventsCalled);
+    ok(attachEventsCalled);
+
+    removeMocksIn(kendo.ui.Menu.fn);
+
+    m.destroy();
+});
+
 test("Element with class k-icon doesn't get removed in an item", function () {
     var m = new kendo.ui.Menu("<ul><li><span class='k-icon'></span></li></ul>");
 
