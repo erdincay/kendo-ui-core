@@ -897,6 +897,13 @@ var __meta__ = { // jshint ignore:line
                                 close: function (e) {
                                     var li = e.sender.wrapper.parent();
 
+                                    if (that._overflowWrapper) {
+                                        var popupId = e.sender.element.data(POPUP_ID_ATTR);
+                                        if (popupId) {
+                                            li = that._overflowWrapper.find(popupOpenerSelector(popupId));
+                                        }
+                                    }
+
                                     if (!that._triggerEvent({ item: li[0], type: CLOSE })) {
                                         li.css(ZINDEX, li.data(ZINDEX));
                                         li.removeData(ZINDEX);
