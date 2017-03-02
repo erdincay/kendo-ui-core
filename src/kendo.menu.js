@@ -953,7 +953,7 @@ var __meta__ = { // jshint ignore:line
             var popups = popupElement.add(popupElement.parent(animationContainerSelector));
             popups.height("");
 
-            var location = popup._vericalLocation();
+            var location = popup._verticalLocation();
             var windowHeight = $(window).height();
             var popupOuterHeight = location.height;
             var popupOffsetTop = Math.max(location.top, 0);

@@ -290,7 +290,7 @@ var __meta__ = { // jshint ignore:line
             }
         },
 
-        _vericalLocation: function() {
+        _verticalLocation: function() {
             var that = this,
                 element = that.element,
                 options = that.options,
