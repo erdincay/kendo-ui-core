@@ -400,6 +400,28 @@ var __meta__ = { // jshint ignore:line
         return result;
     }
 
+    function overflowMenuParents(current, overflowWrapper) {
+        var parents = [];
+        var getParents = function(item){
+            while (item.parentNode && !overflowWrapper.is(item.parentNode)) {
+                parents.push(item.parentNode);
+                item = item.parentNode;
+            }
+        };
+        var elem = current[0] || current;
+        getParents(elem);
+        var last = parents[parents.length - 1];
+        while($(last).is(animationContainerSelector)){
+            var popupElement = $(last).children("ul");
+            var popupId = popupElement.data("group");
+            elem = overflowWrapper.find(popupOpenerSelector(popupId))[0];
+            parents.push(elem);
+            getParents(elem);
+            last = parents[parents.length - 1];
+        }
+        return parents;
+    }
+
     var Menu = Widget.extend({
         init: function(element, options) {
             var that = this;
@@ -814,6 +836,7 @@ var __meta__ = { // jshint ignore:line
 
             if (that._overflowWrapper) {
                 element.find(visiblePopups).each(closePopup);
+                that._overflowWrapper.find("." + FOCUSEDSTATE).removeClass(FOCUSEDSTATE);
             }
 
             element.each(function () {
@@ -935,7 +958,7 @@ var __meta__ = { // jshint ignore:line
 
         _initPopupScrolling: function(popup) {
             var that = this;
-            var scrollButtons = popup.wrapper.children().filter(scrollButtonSelector);
+            var scrollButtons = popup.wrapper.children(scrollButtonSelector);
 
             if (that._overflowWrapper && popup.element[0].scrollHeight > popup.element[0].offsetHeight) {
                 var animation = that.options.animation;
@@ -1032,18 +1055,21 @@ var __meta__ = { // jshint ignore:line
 
                 li.data(TIMER, setTimeout(function () {
                     var popup = that._getPopup(li);
-                    if (popup && isPopupMouseLeaved(li)) {
-                        if (hasChildPopupsHovered(popup.element) || isScrolling(popup.element)) {
+                    if (popup && (isPopupMouseLeaved(li) || that._forceClose)) {
+                        if (!that._forceClose && (hasChildPopupsHovered(popup.element) || isScrolling(popup.element))) {
                             return;
                         }
 
-                        popup.wrapper.children().filter(scrollButtonSelector).hide();
+                        popup.wrapper.children(scrollButtonSelector).hide();
 
                         popup.close();
                         popup.element.attr("aria-hidden", true);
 
                         if (that._overflowWrapper) {
                             that._appendToItem(popup, li);
+                            if (that._forceClose && items.last().is(li[0])) {
+                                delete that._forceClose;
+                            }
                         }
                     }
                 }, that.options.hoverDelay));
@@ -1333,7 +1359,9 @@ var __meta__ = { // jshint ignore:line
             if (options.closeOnClick && (!isLink || isLocalLink) && (!childGroup.length || shouldCloseTheRootItem)) {
                 element.removeClass(HOVERSTATE).css("height"); // Force refresh for Chrome
                 that._oldHoverItem = that._findRootParent(element);
-                that.close(link.parentsUntil(that.element, allItemsSelector));
+                var item = that._parentsUntil(link, that.element, allItemsSelector);
+                that._forceClose = !!that._overflowWrapper;
+                that.close(item);
                 that.clicked = false;
                 if ("MSPointerUp".indexOf(e.type) != -1) {
                     e.preventDefault();
@@ -1359,6 +1387,25 @@ var __meta__ = { // jshint ignore:line
                 return;
             }
             that[openHandle](element);
+        },
+
+        _parentsUntil: function(context, top, selector) {
+            if (!this._overflowWrapper) {
+                return context.parentsUntil(top, selector);
+            } else {
+                var parents = overflowMenuParents(context, this._overflowWrapper);
+                var result = [];
+                $(parents).each(function(){
+                    var parent = $(this);
+                    if (parent.is(top)) {
+                        return false;
+                    }
+                    if (parent.is(selector)) {
+                        result.push(this);
+                    }
+                });
+                return $(result);
+            }
         },
 
         _triggerSelect: function (target, itemElement) {
@@ -1391,8 +1438,27 @@ var __meta__ = { // jshint ignore:line
         },
 
         _documentClick: function (e) {
-            if (contains(this.element[0], e.target)) {
+            var that = this;
+
+            if (contains((that._overflowWrapper || that.element)[0], e.target)) {
                 return;
+            } else {
+                if (that._overflowWrapper) {
+                    var overflowWrapper = that._overflowWrapper;
+                    setTimeout(function(){
+                        var closedPopups = overflowWrapper.children(animationContainerSelector + ":hidden");
+                        closedPopups.each(function(){
+                            var popupWrapper = $(this);
+                            var popup = popupWrapper.children(groupSelector);
+                            var popupId = popup.data(POPUP_ID_ATTR);
+                            if (popupId) {
+                                var popupOpener = overflowWrapper.find(popupOpenerSelector(popup.data(POPUP_ID_ATTR)));
+                                popupWrapper.children(scrollButtonSelector).hide();
+                                that._appendToItem(popup.data(KENDOPOPUP), popupOpener);
+                            }
+                        });
+                    }, DELAY);
+                }
             }
 
             this.clicked = false;
@@ -1518,7 +1584,7 @@ var __meta__ = { // jshint ignore:line
             if (this._isRootItem(item)) {
                 return item;
             } else {
-                return item.parentsUntil(menuSelector, "li.k-item").last();
+                return this._parentsUntil(item, menuSelector, "li.k-item").last();
             }
         },
 
