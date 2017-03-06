@@ -581,6 +581,14 @@ var __meta__ = { // jshint ignore:line
             if(that._overflowWrapper) {
                 that._overflowWrapper.off(NS);
                 that._overflowWrapper.find(scrollButtonSelector).off(NS).remove();
+                that._overflowWrapper.children(animationContainerSelector).each(function(i, popupWrapper){
+                    var popupId = $(popupWrapper).children(groupSelector).data(POPUP_ID_ATTR);
+                    var popupParentLi = that._overflowWrapper.find(popupOpenerSelector(popupId));
+                    if (popupParentLi) {
+                        popupParentLi.append(popupWrapper);
+                    }
+                });
+
                 that._overflowWrapper.find(popupOpenerSelector()).removeAttr("data-groupparent");
                 that._overflowWrapper.find(popupGroupSelector()).removeAttr("data-group");
                 that.element.unwrap();
@@ -845,8 +853,14 @@ var __meta__ = { // jshint ignore:line
                 clearTimeout(li.data(TIMER));
 
                 li.data(TIMER, setTimeout(function () {
-                    var ul = li.find(".k-menu-group:first:hidden"),
-                        popup;
+                    var ul = li.find(".k-menu-group:first:hidden");
+                    var popup;
+                    var overflowPopup;
+
+                    if  (!ul[0] && that._overflowWrapper) {
+                        overflowPopup = that._getPopup(li);
+                        ul = overflowPopup && overflowPopup.element;
+                    }
 
                     if (ul[0] && that._triggerEvent({ item: li[0], type: OPEN }) === false) {
 
@@ -901,6 +915,7 @@ var __meta__ = { // jshint ignore:line
                                         var popupId = e.sender.element.data(POPUP_ID_ATTR);
                                         if (popupId) {
                                             li = that._overflowWrapper.find(popupOpenerSelector(popupId));
+                                            e.sender.wrapper.children(scrollButtonSelector).hide();
                                         }
                                     }
 
@@ -941,11 +956,6 @@ var __meta__ = { // jshint ignore:line
         _configurePopupOverflow: function(popup, popupOpener) {
             var that = this;
             if (that._overflowWrapper) {
-                if (popup.wrapper.length &&
-                    $(popup.options.appendTo).is(that._overflowWrapper) && !popup.wrapper.parent().is(that._overflowWrapper)) {
-                    popup.wrapper.appendTo(that._overflowWrapper);
-                }
-
                 //popup height is not calculated properly and its position is wrong when menu direction is top and the popup is opened for the first time
                 if (popup.element.parent().is(that._overflowWrapper)) {
                     kendo.wrap(popup.element, popup.options.autosize)
@@ -1067,13 +1077,10 @@ var __meta__ = { // jshint ignore:line
                             return;
                         }
 
-                        popup.wrapper.children(scrollButtonSelector).hide();
-
                         popup.close();
                         popup.element.attr("aria-hidden", true);
 
                         if (that._overflowWrapper) {
-                            that._appendToItem(popup, li);
                             if (that._forceClose && items.last().is(li[0])) {
                                 delete that._forceClose;
                             }
@@ -1099,16 +1106,6 @@ var __meta__ = { // jshint ignore:line
             return popup;
         },
 
-        _appendToItem: function(popup, li) {
-            var animation = popup.options.animation;
-            var timeout = ((animation && animation.close && animation.close.duration) || 0) + DELAY;
-            setTimeout(function(){
-                var popupParent = popup.element.parent();
-                if (popupParent.is(animationContainerSelector)) {
-                    popupParent.appendTo(li);
-                }
-            }, timeout);
-        },
         _toggleDisabled: function (items, enable) {
             this.element.find(items).each(function () {
                 $(this)
@@ -1192,7 +1189,8 @@ var __meta__ = { // jshint ignore:line
         _mouseenter: function (e) {
             var that = this;
             var element = $(e.currentTarget);
-            var hasChildren = (element.children(animationContainerSelector).length || element.children(groupSelector).length) || !!element.data(POPUP_OPENER_ATTR);
+            var hasChildren = (element.children(animationContainerSelector).length || element.children(groupSelector).length) ||
+                (!!element.data(POPUP_OPENER_ATTR) && that._overflowWrapper.children(popupGroupSelector(element.data(POPUP_OPENER_ATTR))));
             var popupId = element.data(POPUP_OPENER_ATTR) || element.parent().data(POPUP_ID_ATTR);
 
             if (popupId) {
@@ -1449,26 +1447,9 @@ var __meta__ = { // jshint ignore:line
 
             if (contains((that._overflowWrapper || that.element)[0], e.target)) {
                 return;
-            } else {
-                if (that._overflowWrapper) {
-                    var overflowWrapper = that._overflowWrapper;
-                    setTimeout(function(){
-                        var closedPopups = overflowWrapper.children(animationContainerSelector + ":hidden");
-                        closedPopups.each(function(){
-                            var popupWrapper = $(this);
-                            var popup = popupWrapper.children(groupSelector);
-                            var popupId = popup.data(POPUP_ID_ATTR);
-                            if (popupId) {
-                                var popupOpener = overflowWrapper.find(popupOpenerSelector(popup.data(POPUP_ID_ATTR)));
-                                popupWrapper.children(scrollButtonSelector).hide();
-                                that._appendToItem(popup.data(KENDOPOPUP), popupOpener);
-                            }
-                        });
-                    }, DELAY);
-                }
             }
 
-            this.clicked = false;
+            that.clicked = false;
         },
 
         _focus: function (e) {
