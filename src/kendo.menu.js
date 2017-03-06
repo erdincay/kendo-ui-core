@@ -18,6 +18,7 @@ var __meta__ = { // jshint ignore:line
         MOUSEDOWN = "mousedown",
         CLICK = "click",
         DELAY = 30,
+        SCROLLSPEED = 40,
         extend = $.extend,
         proxy = $.proxy,
         each = $.each,
@@ -45,6 +46,7 @@ var __meta__ = { // jshint ignore:line
         allPointers = msPointers || pointers,
         MOUSEENTER = pointers ? "pointerenter" : (msPointers ? "MSPointerEnter" : "mouseenter"),
         MOUSELEAVE = pointers ? "pointerleave" : (msPointers ? "MSPointerLeave" : "mouseleave"),
+        MOUSEWHEEL = "DOMMouseScroll" + NS + " mousewheel" + NS,
         SCROLLWIDTH = "scrollWidth",
         SCROLLHEIGHT = "scrollHeight",
         OFFSETWIDTH = "offsetWidth",
@@ -422,6 +424,21 @@ var __meta__ = { // jshint ignore:line
         return parents;
     }
 
+    function mousewheelDelta(e) {
+        var delta = 0;
+
+        if (e.wheelDelta) {
+            delta = -e.wheelDelta / 120;
+            delta = delta > 0 ? Math.ceil(delta) : Math.floor(delta);
+        }
+
+        if (e.detail) {
+            delta = Math.round(e.detail / 3);
+        }
+
+        return delta;
+    }
+
     var Menu = Widget.extend({
         init: function(element, options) {
             var that = this;
@@ -582,7 +599,9 @@ var __meta__ = { // jshint ignore:line
                 that._overflowWrapper.off(NS);
                 that._overflowWrapper.find(scrollButtonSelector).off(NS).remove();
                 that._overflowWrapper.children(animationContainerSelector).each(function(i, popupWrapper){
-                    var popupId = $(popupWrapper).children(groupSelector).data(POPUP_ID_ATTR);
+                    var ul = $(popupWrapper).children(groupSelector);
+                    ul.off(MOUSEWHEEL);
+                    var popupId = ul.data(POPUP_ID_ATTR);
                     var popupParentLi = that._overflowWrapper.find(popupOpenerSelector(popupId));
                     if (popupParentLi) {
                         popupParentLi.append(popupWrapper);
@@ -591,6 +610,7 @@ var __meta__ = { // jshint ignore:line
 
                 that._overflowWrapper.find(popupOpenerSelector()).removeAttr("data-groupparent");
                 that._overflowWrapper.find(popupGroupSelector()).removeAttr("data-group");
+                that.element.off(MOUSEWHEEL);
                 that.element.unwrap();
                 delete that._openedPopups;
             }
@@ -598,7 +618,7 @@ var __meta__ = { // jshint ignore:line
 
         _initScrolling: function(scrollElement, backwardBtn, forwardBtn, isHorizontal) {
             var that = this;
-            var speed = that.options.scrollSpeed || 40;
+            var speed = that.options.scrollSpeed || SCROLLSPEED;
             var backward = "-=" + speed;
             var forward = "+=" + speed;
             var scrolling = false;
@@ -630,6 +650,22 @@ var __meta__ = { // jshint ignore:line
                     scrolling = false;
                     that._toggleScrollButtons(scrollElement, backwardBtn, forwardBtn, isHorizontal);
                 });
+
+            scrollElement.on(MOUSEWHEEL, function(e){
+                if (!e.ctrlKey && !e.shiftKey && !e.altKey) {
+                    var wheelDelta = mousewheelDelta(e.originalEvent);
+                    var scrollSpeed = Math.abs(wheelDelta) * speed / 2;
+                    var value = (wheelDelta > 0 ? "+=" : "-=") + scrollSpeed;
+                    var scrollValue = isHorizontal ? {"scrollLeft": value} : {"scrollTop": value };
+
+                    that._closeChildPopups(scrollElement);
+
+                    scrollElement.finish().animate(scrollValue, "fast", "linear", function(){
+                        that._toggleScrollButtons(scrollElement, backwardBtn, forwardBtn, isHorizontal);
+                    });
+                    e.preventDefault();
+                }
+            });
         },
 
         _toggleScrollButtons: function(scrollElement, backwardBtn, forwardBtn, horizontal) {
