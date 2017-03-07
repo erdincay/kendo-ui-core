@@ -66,7 +66,7 @@ test('UL elements inside content don\'t get k-menu-group class', function() {
 });
 
 test('menu is inside scroll wrapper', function() {
-    menu._initOverflow({overflow: true, orientation: "horizontal"});
+    menu._initOverflow({scrollable: true, orientation: "horizontal"});
     ok(menu.element.parent().is("div.k-menu-scroll-wrapper.horizontal"));
 });
 

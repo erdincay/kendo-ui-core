@@ -18,7 +18,7 @@ var __meta__ = { // jshint ignore:line
         MOUSEDOWN = "mousedown",
         CLICK = "click",
         DELAY = 30,
-        SCROLLSPEED = 40,
+        SCROLLSPEED = 50,
         extend = $.extend,
         proxy = $.proxy,
         each = $.each,
@@ -507,6 +507,7 @@ var __meta__ = { // jshint ignore:line
             openOnClick: false,
             closeOnClick: true,
             hoverDelay: 100,
+            scrollable: false,
             popupCollision: undefined
         },
 
@@ -581,9 +582,8 @@ var __meta__ = { // jshint ignore:line
             var isHorizontal = options.orientation == "horizontal";
             var backwardBtn, forwardBtn;
 
-            if (options.overflow) {
+            if (options.scrollable) {
                 that._openedPopups = {};
-                that._isRtl = kendo.support.isRtl(that.wrapper);
                 that._overflowWrapper = that.element.wrap("<div class='k-menu-scroll-wrapper " + options.orientation + "'></div>").parent();
 
                 backwardBtn = $(templates.scrollButton({direction: isHorizontal ? "left" : "up"}));
@@ -597,7 +597,7 @@ var __meta__ = { // jshint ignore:line
 
         _reinitOverflow: function(options) {
             var that = this;
-            var overflowChanged = options.overflow != that.options.overflow || options.orientation != that.options.orientation;
+            var overflowChanged = options.scrollable != that.options.scrollable || options.orientation != that.options.orientation;
 
             if (overflowChanged) {
                 that._destroyOverflow();
@@ -633,6 +633,7 @@ var __meta__ = { // jshint ignore:line
         _initScrolling: function(scrollElement, backwardBtn, forwardBtn, isHorizontal) {
             var that = this;
             var speed = that.options.scrollSpeed || SCROLLSPEED;
+            var mouseScrollSpeed = that.options.mouseScrollSpeed || (SCROLLSPEED / 2);
             var backward = "-=" + speed;
             var forward = "+=" + speed;
             var scrolling = false;
@@ -655,8 +656,8 @@ var __meta__ = { // jshint ignore:line
                 e.stopPropagation();
             };
 
-            backwardBtn.on(MOUSEENTER + NS, {direction: that._isRtl ? forward : backward}, mouseenterHandler);
-            forwardBtn.on(MOUSEENTER + NS, {direction: that._isRtl ? backward : forward}, mouseenterHandler);
+            backwardBtn.on(MOUSEENTER + NS, {direction: backward}, mouseenterHandler);
+            forwardBtn.on(MOUSEENTER + NS, {direction: forward}, mouseenterHandler);
 
             backwardBtn.add(forwardBtn)
                 .on(MOUSELEAVE + NS, function() {
@@ -668,7 +669,7 @@ var __meta__ = { // jshint ignore:line
             scrollElement.on(MOUSEWHEEL, function(e){
                 if (!e.ctrlKey && !e.shiftKey && !e.altKey) {
                     var wheelDelta = mousewheelDelta(e.originalEvent);
-                    var scrollSpeed = Math.abs(wheelDelta) * speed / 2;
+                    var scrollSpeed = Math.abs(wheelDelta) * mouseScrollSpeed;
                     var value = (wheelDelta > 0 ? "+=" : "-=") + scrollSpeed;
                     var scrollValue = isHorizontal ? {"scrollLeft": value} : {"scrollTop": value };
 
@@ -683,13 +684,12 @@ var __meta__ = { // jshint ignore:line
         },
 
         _toggleScrollButtons: function(scrollElement, backwardBtn, forwardBtn, horizontal) {
-            var that = this;
             var currentScroll = horizontal ? scrollElement.scrollLeft() : scrollElement.scrollTop();
             var scrollSize = horizontal ? SCROLLWIDTH : SCROLLHEIGHT;
             var offset = horizontal ? OFFSETWIDTH : OFFSETHEIGHT;
 
-            backwardBtn.toggle(that._isRtl ? currentScroll < scrollElement[0][scrollSize] - scrollElement[0][offset] - 1 : currentScroll !== 0);
-            forwardBtn.toggle(that._isRtl ? currentScroll !== 0 : currentScroll < scrollElement[0][scrollSize] - scrollElement[0][offset] - 1);
+            backwardBtn.toggle(currentScroll !== 0);
+            forwardBtn.toggle(currentScroll < scrollElement[0][scrollSize] - scrollElement[0][offset] - 1);
         },
 
         setOptions: function(options) {

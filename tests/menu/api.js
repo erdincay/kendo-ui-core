@@ -135,7 +135,7 @@ asyncTest('hovering root item opens it and raises open event', function() {
 });
 
 asyncTest('overflow menu - hovering root item opens it and raises open event', function() {
-    menu._initOverflow({overflow: true, orientation: "horizontal"});
+    menu._initOverflow({scrollable: true, orientation: "horizontal"});
     var item = getRootItem(1).parent();
     isOpenRaised = false;
     menu._mouseenter({ currentTarget: item[0], delegateTarget: menu.element[0] });
@@ -147,7 +147,7 @@ asyncTest('overflow menu - hovering root item opens it and raises open event', f
 });
 
 asyncTest('overflow menu - hovering item moves its popup outside menu', function() {
-    menu._initOverflow({overflow: true, orientation: "horizontal"});
+    menu._initOverflow({scrollable: true, orientation: "horizontal"});
     var item = getRootItem(1).parent();
     menu._mouseenter({ currentTarget: item[0], delegateTarget: menu.element[0] });
 
@@ -160,7 +160,7 @@ asyncTest('overflow menu - hovering item moves its popup outside menu', function
 
 
 asyncTest('overflow menu - leaving root item closes it and raises close event', 1, function() {
-    menu._initOverflow({overflow: true, orientation: "horizontal"});
+    menu._initOverflow({scrollable: true, orientation: "horizontal"});
     var item = getRootItem(1).parent();
 
     menu._mouseenter({ currentTarget: item[0], delegateTarget: menu.element[0] });
@@ -191,7 +191,7 @@ asyncTest('leaving root item closes it and raises close event', 1, function() {
 });
 
 test('overflow menu - clicking should raise select event', function() {
-    menu._initOverflow({overflow: true, orientation: "horizontal"});
+    menu._initOverflow({scrollable: true, orientation: "horizontal"});
     var link = getRootItem(2);
 
     isSelectRaised = false;
@@ -253,7 +253,7 @@ asyncTest('open should open item even if disabled', function() {
 });
 
 asyncTest('overflow menu - open should open item', function() {
-    menu._initOverflow({overflow: true, orientation: "horizontal"});
+    menu._initOverflow({scrollable: true, orientation: "horizontal"});
     var item = getRootItem(6).parent();
 
     menu.open(item);
@@ -361,10 +361,10 @@ test('setOptions resets the dataSource object', function() {
 test('overflow menu - setOptions reinitialize overflow wrapper', function() {
     var m = new kendo.ui.Menu("<div />");
 
-    m.setOptions({ overflow: true, orientation: "horizontal" });
+    m.setOptions({ scrollable: true, orientation: "horizontal" });
     ok(m._overflowWrapper.is(".horizontal"));
 
-    m.setOptions({ overflow: true, orientation: "vertical" });
+    m.setOptions({ scrollable: true, orientation: "vertical" });
     ok(m._overflowWrapper.is(".vertical"));
 
     m.destroy();
@@ -379,7 +379,7 @@ test('overflow menu - setOptions reattach events', function() {
     mockFunc(kendo.ui.Menu.fn, "_detachMenuEventsHandlers", function() { detachEventsCalled = true; });
     mockFunc(kendo.ui.Menu.fn, "_attachMenuEventsHandlers", function() { attachEventsCalled = true; });
 
-    m.setOptions({ overflow: true, orientation: "horizontal" });
+    m.setOptions({ scrollable: true, orientation: "horizontal" });
 
     ok(detachEventsCalled);
     ok(attachEventsCalled);
