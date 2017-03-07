@@ -591,7 +591,32 @@ var __meta__ = { // jshint ignore:line
                 backwardBtn.add(forwardBtn).appendTo(that._overflowWrapper);
 
                 that._initScrolling(that.element, backwardBtn, forwardBtn, isHorizontal);
+
+                that._setOverflowWrapperSize();
+
                 that._toggleScrollButtons(that.element, backwardBtn, forwardBtn, isHorizontal);
+            }
+        },
+
+        _setOverflowWrapperSize: function() {
+            var that = this;
+            var isHorizontal = that.options.orientation == "horizontal";
+            var element = that.element[0];
+            var wrapper = that._overflowWrapper[0];
+            var wrapperWidth, wrapperHeight, menuWidth, menuHeight;
+
+            if (isHorizontal) {
+                wrapperWidth = wrapper.offsetWidth;
+                menuWidth = element.offsetWidth;
+                if (menuWidth != wrapperWidth) {
+                     that._overflowWrapper.width(menuWidth);
+                }
+            } else {
+                wrapperHeight = wrapper.offsetHeight;
+                menuHeight = element.offsetHeight;
+                if (menuHeight != wrapperHeight) {
+                     that._overflowWrapper.height(menuHeight);
+                }
             }
         },
 
