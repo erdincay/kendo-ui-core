@@ -402,6 +402,16 @@ var __meta__ = { // jshint ignore:line
         return result;
     }
 
+    function popupParentItem(popupElement, overflowWrapper) {
+        var popupId = popupElement.data(POPUP_ID_ATTR);
+        return popupId ? overflowWrapper.find(popupOpenerSelector(popupId)) : $([]);
+    }
+
+    function itemPopup(item, overflowWrapper) {
+        var popupId = item.data(POPUP_OPENER_ATTR);
+        return popupId ? overflowWrapper.children(animationContainerSelector).children(popupGroupSelector(popupId)) : $([]);
+    }
+
     function overflowMenuParents(current, overflowWrapper) {
         var parents = [];
         var getParents = function(item){
@@ -415,8 +425,7 @@ var __meta__ = { // jshint ignore:line
         var last = parents[parents.length - 1];
         while($(last).is(animationContainerSelector)){
             var popupElement = $(last).children("ul");
-            var popupId = popupElement.data("group");
-            elem = overflowWrapper.find(popupOpenerSelector(popupId))[0];
+            elem = popupParentItem(popupElement, overflowWrapper)[0];
             parents.push(elem);
             getParents(elem);
             last = parents[parents.length - 1];
@@ -529,16 +538,17 @@ var __meta__ = { // jshint ignore:line
             (overflowWrapper || element).on(POINTERDOWN, itemSelector, proxy(that._focusHandler, that))
                    .on(CLICK + NS, disabledSelector, false)
                    .on(CLICK + NS, itemSelector, proxy(that._click , that))
-                   .on("keydown" + NS, proxy(that._keydown, that))
-                   .on("focus" + NS, proxy(that._focus, that))
-                   .on("focus" + NS, ".k-content", proxy(that._focus, that))
                    .on(POINTERDOWN + " " + MOUSEDOWN + NS, ".k-content", proxy(that._preventClose, that))
-                   .on("blur" + NS, proxy(that._removeHoverItem, that))
-                   .on("blur" + NS, "[tabindex]", proxy(that._checkActiveElement, that))
                    .on(MOUSEENTER + NS, itemSelector, proxy(that._mouseenter, that))
                    .on(MOUSELEAVE + NS, itemSelector, proxy(that._mouseleave, that))
                    .on(MOUSEENTER + NS + " " + MOUSELEAVE + NS + " " +
                        MOUSEDOWN + NS + " " + CLICK + NS, linkSelector, proxy(that._toggleHover, that));
+
+            element.on("keydown" + NS, proxy(that._keydown, that))
+                   .on("focus" + NS, proxy(that._focus, that))
+                   .on("focus" + NS, ".k-content", proxy(that._focus, that))
+                   .on("blur" + NS, proxy(that._removeHoverItem, that))
+                   .on("blur" + NS, "[tabindex]", proxy(that._checkActiveElement, that));
 
             if (overflowWrapper) {
                 overflowWrapper
@@ -554,7 +564,12 @@ var __meta__ = { // jshint ignore:line
 
         _detachMenuEventsHandlers: function() {
             var that = this;
-            (that._overflowWrapper || that.element).off(NS);
+
+            if (that._overflowWrapper) {
+                that._overflowWrapper.off(NS);
+            }
+
+            that.element.off(NS);
 
             if (that._documentClickHandler) {
                 $(document).unbind("click", that._documentClickHandler);
@@ -601,9 +616,8 @@ var __meta__ = { // jshint ignore:line
                 that._overflowWrapper.children(animationContainerSelector).each(function(i, popupWrapper){
                     var ul = $(popupWrapper).children(groupSelector);
                     ul.off(MOUSEWHEEL);
-                    var popupId = ul.data(POPUP_ID_ATTR);
-                    var popupParentLi = that._overflowWrapper.find(popupOpenerSelector(popupId));
-                    if (popupParentLi) {
+                    var popupParentLi = popupParentItem(ul, that._overflowWrapper);
+                    if (popupParentLi.length) {
                         popupParentLi.append(popupWrapper);
                     }
                 });
@@ -1225,8 +1239,7 @@ var __meta__ = { // jshint ignore:line
         _mouseenter: function (e) {
             var that = this;
             var element = $(e.currentTarget);
-            var hasChildren = (element.children(animationContainerSelector).length || element.children(groupSelector).length) ||
-                (!!element.data(POPUP_OPENER_ATTR) && that._overflowWrapper.children(popupGroupSelector(element.data(POPUP_OPENER_ATTR))));
+            var hasChildren = that._itemHasChildren(element);
             var popupId = element.data(POPUP_OPENER_ATTR) || element.parent().data(POPUP_ID_ATTR);
 
             if (popupId) {
@@ -1293,7 +1306,7 @@ var __meta__ = { // jshint ignore:line
             var that = this;
             var popupElement = $(e.currentTarget);
 
-            if (!popupElement.parent().is(animationContainerSelector)) {
+            if (popupElement.is(animationContainerSelector)) {
                 that._closePopups(popupElement.children("ul"));
             }
         },
@@ -1576,7 +1589,8 @@ var __meta__ = { // jshint ignore:line
             if (!item.length) {
                 return false;
             }
-            return item.children("ul.k-menu-group, div.k-animation-container").length > 0;
+            return item.children("ul.k-menu-group, div.k-animation-container").length > 0 ||
+                (!!item.data(POPUP_OPENER_ATTR) && !!this._overflowWrapper.children(popupGroupSelector(item.data(POPUP_OPENER_ATTR))));
         },
 
         _moveHover: function (item, nextItem) {
@@ -1632,9 +1646,13 @@ var __meta__ = { // jshint ignore:line
                 }
             } else if (hasChildren) {
                 that.open(item);
-                nextItem = item.find(".k-menu-group").children().first();
+                nextItem = that._childPopupElement(item).children().first();
             } else if (that.options.orientation == "horizontal") {
                 parentItem = that._findRootParent(item);
+                if (that._overflowWrapper) {
+                    var rootPopup = itemPopup(parentItem, that._overflowWrapper);
+                    that._closeChildPopups(rootPopup);
+                }
                 that.close(parentItem);
                 nextItem = parentItem.nextAll(nextSelector);
             }
@@ -1660,6 +1678,9 @@ var __meta__ = { // jshint ignore:line
                 }
             } else {
                 nextItem = item.parent().closest(".k-item");
+                if (!nextItem.length && that._overflowWrapper) {
+                    nextItem = popupParentItem(item.parent(), that._overflowWrapper);
+                }
                 that.close(nextItem);
                 if (that._isRootItem(nextItem) && that.options.orientation == "horizontal") {
                     nextItem = nextItem.prevAll(nextSelector);
@@ -1683,7 +1704,7 @@ var __meta__ = { // jshint ignore:line
                     return;
                 } else {
                     that.open(item);
-                    nextItem = item.find(".k-menu-group").children().first();
+                    nextItem = that._childPopupElement(item).children().first();
                 }
             } else {
                 nextItem = item.nextAll(nextSelector);
@@ -1732,6 +1753,14 @@ var __meta__ = { // jshint ignore:line
             }
 
             return nextItem;
+        },
+
+        _childPopupElement: function(item) {
+            var popupElement = item.find(".k-menu-group");
+            if (!popupElement.length && this._overflowWrapper) {
+                popupElement = itemPopup(item, this._overflowWrapper);
+            }
+            return popupElement;
         },
 
         _triggerEvent: function(e) {
