@@ -147,20 +147,20 @@ asyncTest('overflow menu - hovering root item opens it and raises open event', f
 });
 
 asyncTest('overflow menu - hovering item moves its popup outside menu', function() {
-    menu._initOverflow({scrollable: true, orientation: "horizontal"});
+    menu.setOptions({ scrollable: true, orientation: "horizontal" });
     var item = getRootItem(1).parent();
     menu._mouseenter({ currentTarget: item[0], delegateTarget: menu.element[0] });
 
     setTimeout(function () {
         ok(item.data("groupparent"));
-        ok(menu._overflowWrapper.children("div.k-animation-container").children("ul").data("group") === item.data("groupparent"));
+        ok(menu._overflowWrapper().children("div.k-animation-container").children("ul").data("group") === item.data("groupparent"));
         start();
     }, 1);
 });
 
 
 asyncTest('overflow menu - leaving root item closes it and raises close event', 1, function() {
-    menu._initOverflow({scrollable: true, orientation: "horizontal"});
+    menu.setOptions({ scrollable: true, orientation: "horizontal" });
     var item = getRootItem(1).parent();
 
     menu._mouseenter({ currentTarget: item[0], delegateTarget: menu.element[0] });
@@ -191,7 +191,7 @@ asyncTest('leaving root item closes it and raises close event', 1, function() {
 });
 
 test('overflow menu - clicking should raise select event', function() {
-    menu._initOverflow({scrollable: true, orientation: "horizontal"});
+    menu.setOptions({ scrollable: true, orientation: "horizontal" });
     var link = getRootItem(2);
 
     isSelectRaised = false;
@@ -253,13 +253,13 @@ asyncTest('open should open item even if disabled', function() {
 });
 
 asyncTest('overflow menu - open should open item', function() {
-    menu._initOverflow({scrollable: true, orientation: "horizontal"});
+    menu.setOptions({ scrollable: true, orientation: "horizontal" });
     var item = getRootItem(6).parent();
 
     menu.open(item);
 
     setTimeout(function () {
-        ok(menu._overflowWrapper.find('.k-group[data-group]').is(":visible"));
+        ok(menu._overflowWrapper().find('.k-group[data-group]').is(":visible"));
         start();
     }, 1);
 });
@@ -362,27 +362,21 @@ test('overflow menu - setOptions reinitialize overflow wrapper', function() {
     var m = new kendo.ui.Menu("<div />");
 
     m.setOptions({ scrollable: true, orientation: "horizontal" });
-    ok(m._overflowWrapper.is(".horizontal"));
+    ok(m._overflowWrapper().is(".horizontal"));
 
     m.setOptions({ scrollable: true, orientation: "vertical" });
-    ok(m._overflowWrapper.is(".vertical"));
+    ok(m._overflowWrapper().is(".vertical"));
 
     m.destroy();
 });
 
-test('overflow menu - setOptions reattach events', function() {
+test('overflow menu - setOptions reattach events', 2, function() {
     var m = new kendo.ui.Menu("<div />");
 
-    var detachEventsCalled = false;
-    var attachEventsCalled = false;
-
-    mockFunc(kendo.ui.Menu.fn, "_detachMenuEventsHandlers", function() { detachEventsCalled = true; });
-    mockFunc(kendo.ui.Menu.fn, "_attachMenuEventsHandlers", function() { attachEventsCalled = true; });
+    mockFunc(kendo.ui.Menu.fn, "_detachMenuEventsHandlers", function() { ok(true); });
+    mockFunc(kendo.ui.Menu.fn, "_attachMenuEventsHandlers", function() { ok(true); });
 
     m.setOptions({ scrollable: true, orientation: "horizontal" });
-
-    ok(detachEventsCalled);
-    ok(attachEventsCalled);
 
     removeMocksIn(kendo.ui.Menu.fn);
 

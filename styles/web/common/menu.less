@@ -7,6 +7,7 @@
 
 .k-menu,
 .k-menu-scroll-wrapper .k-menu-group,
+.k-popups-wrapper .k-menu-group,
 .k-menu .k-menu-group
 {
     list-style: none;
@@ -26,6 +27,7 @@
 }
 
 .k-menu-scroll-wrapper .k-item,
+.k-popups-wrapper .k-item,
 .k-menu .k-item
 {
     -webkit-user-select: none;
@@ -34,11 +36,14 @@
 }
 
 .k-menu-scroll-wrapper .k-item div,
+.k-popups-wrapper .k-item div,
 .k-menu .k-item div
 {
     user-select: default;
 }
 
+.k-popups-wrapper .k-item .k-item,
+.k-popups-wrapper.vertical > .k-item,
 .k-menu-scroll-wrapper .k-item .k-item,
 .k-menu-scroll-wrapper.vertical > .k-item
 .k-menu .k-item .k-item,
@@ -52,6 +57,9 @@ ul.k-menu-vertical > .k-item
 .k-menu-scroll-wrapper .k-item > .k-link > .k-icon,
 .k-menu-scroll-wrapper .k-image,
 .k-menu-scroll-wrapper .k-sprite,
+.k-popups-wrapper .k-item > .k-link > .k-icon,
+.k-popups-wrapper .k-image,
+.k-popups-wrapper .k-sprite,
 .k-menu .k-item > .k-link > .k-icon,
 .k-menu .k-image,
 .k-menu .k-sprite
@@ -61,12 +69,14 @@ ul.k-menu-vertical > .k-item
 }
 
 .k-menu-scroll-wrapper .k-item > .k-link > .k-icon,
+.k-popups-wrapper .k-item > .k-link > .k-icon,
 .k-menu .k-item > .k-link > .k-icon
 {
     margin: -2px 0 0;
 }
 
 .k-menu-scroll-wrapper .k-item > .k-link,
+.k-popups-wrapper .k-item > .k-link,
 .k-menu .k-item > .k-link
 {
     display: block;
@@ -76,6 +86,7 @@ ul.k-menu-vertical > .k-item
 }
 
 .k-menu-scroll-wrapper .k-menu-group,
+.k-popups-wrapper .k-menu-group,
 .k-menu .k-menu-group
 {
     display: none;
@@ -86,6 +97,7 @@ ul.k-menu-vertical > .k-item
 }
 
 .k-menu-scroll-wrapper .k-menu-group > .k-item,
+.k-popups-wrapper .k-menu-group > .k-item,
 .k-menu .k-menu-group > .k-item
 {
     display: block;
@@ -94,6 +106,8 @@ ul.k-menu-vertical > .k-item
 
 .k-menu-scroll-wrapper .k-item,
 .k-menu-scroll-wrapper.horizontal > .k-item,
+.k-popups-wrapper .k-item,
+.k-popups-wrapper.horizontal > .k-item,
 .k-menu .k-item,
 .k-widget.k-menu-horizontal > .k-item
 {
@@ -107,34 +121,40 @@ ul.k-menu-vertical > .k-item
 }
 
 .k-menu-scroll-wrapper .k-menu-group .k-item > .k-link,
+.k-popups-wrapper.vertical > .k-item > .k-link,
 .k-context-menu.k-menu-vertical > .k-item > .k-link,
 .k-menu .k-menu-group .k-item > .k-link
 {
     padding: .28em 1.8em .38em .9em;
 }
 
+.k-popups-wrapper.horizontal > .k-separator,
 .k-context-menu.k-menu-horizontal > .k-separator
 {
     display: none;
 }
 
+.k-popups-wrapper.horizontal > .k-item,
 .k-context-menu.k-menu-horizontal > .k-item
 {
     .box-sizing(border-box);
 }
 
+.k-popups-wrapper.horizontal > .k-last,
 .k-context-menu.k-menu-horizontal > .k-last
 {
     border: 0;
 }
 
 .k-menu-scroll-wrapper .k-item > .k-link > .k-i-arrow-60-down,
+.k-popups-wrapper .k-item > .k-link > .k-i-arrow-60-down,
 .k-menu .k-item > .k-link > .k-i-arrow-60-down
 {
     margin-right: -8px;
 }
 
 .k-menu-scroll-wrapper .k-item > .k-link > .k-i-arrow-60-right,
+.k-popups-wrapper .k-item > .k-link > .k-i-arrow-60-right,
 .k-menu .k-item > .k-link > .k-i-arrow-60-right
 {
     position: absolute;
@@ -145,6 +165,7 @@ ul.k-menu-vertical > .k-item
 }
 
 .k-menu-scroll-wrapper .k-animation-container,
+.k-popups-wrapper .k-animation-container,
 .k-menu .k-animation-container
 {
     border: 0;
@@ -152,6 +173,8 @@ ul.k-menu-vertical > .k-item
 
 .k-menu-scroll-wrapper .k-animation-container,
 .k-menu-scroll-wrapper .k-menu-group,
+.k-popups-wrapper .k-animation-container,
+.k-popups-wrapper .k-menu-group,
 .k-menu .k-animation-container,
 .k-menu .k-menu-group
 {
@@ -163,6 +186,10 @@ ul.k-menu-vertical > .k-item
 .k-menu-scroll-wrapper .k-menu-group .k-menu-group,
 .k-menu-scroll-wrapper.vertical .k-animation-container,
 .k-menu-scroll-wrapper.vertical .k-menu-group,
+.k-popups-wrapper .k-animation-container .k-animation-container,
+.k-popups-wrapper .k-menu-group .k-menu-group,
+.k-popups-wrapper.vertical .k-animation-container,
+.k-popups-wrapper.vertical .k-menu-group,
 .k-menu .k-animation-container .k-animation-container,
 .k-menu .k-menu-group .k-menu-group,
 .k-menu-vertical .k-animation-container,
@@ -173,6 +200,7 @@ ul.k-menu-vertical > .k-item
 }
 
 .k-menu-scroll-wrapper .k-animation-container .k-menu-group,
+.k-popups-wrapper .k-animation-container .k-menu-group,
 .k-menu .k-animation-container .k-menu-group
 {
     top: auto;
@@ -182,6 +210,7 @@ ul.k-menu-vertical > .k-item
 
 .k-menu .k-animation-container,
 .k-menu-scroll-wrapper .k-animation-container,
+.k-popups-wrapper .k-animation-container,
 .k-popup .k-animation-container
 {
     margin-top: -1px;
@@ -190,6 +219,7 @@ ul.k-menu-vertical > .k-item
 
 .k-ie .k-menu .k-animation-container,
 .k-ie .k-menu-scroll-wrapper .k-animation-container,
+.k-ie .k-popups-wrapper .k-animation-container,
 .k-ie .k-popup .k-animation-container
 {
     margin-top: -2px;
@@ -201,6 +231,7 @@ ul.k-menu-vertical > .k-item
 }
 
 .k-menu-scroll-wrapper .k-separator,
+.k-popups-wrapper .k-separator,
 ul.k-menu .k-separator
 {
     padding: 0.25em 0;
@@ -213,6 +244,8 @@ ul.k-menu .k-separator
 
 .k-menu-scroll-wrapper.vertical .k-separator,
 .k-menu-scroll-wrapper.vertical .k-menu-group .k-separator,
+.k-popups-wrapper.vertical .k-separator,
+.k-popups-wrapper.vertical .k-menu-group .k-separator,
 ul.k-menu-vertical .k-separator,
 .k-menu .k-menu-group .k-separator
 {
@@ -222,26 +255,31 @@ ul.k-menu-vertical .k-separator,
     border-width: 1px 0 0;
 }
 
+.k-popups-wrapper .k-widget.k-menu,
 .k-menu-scroll-wrapper .k-widget.k-menu {
     white-space: nowrap;
     overflow: hidden;
 }
 
+.k-popups-wrapper.vertical .k-menu.k-menu-vertical,
 .k-menu-scroll-wrapper.vertical .k-menu.k-menu-vertical {
     height: 100%;
     box-sizing: border-box;
 }
 
+.k-popups-wrapper.horizontal .k-menu.k-menu-horizontal > .k-item,
 .k-menu-scroll-wrapper.horizontal .k-menu.k-menu-horizontal > .k-item {
     display: inline-block;
     overflow: hidden;
     float: none;
 }
 
+.k-popups-wrapper.vertical .k-menu.k-menu-vertical > .k-item,
 .k-menu-scroll-wrapper.vertical .k-menu.k-menu-vertical > .k-item {
     overflow: hidden;
 }
 
+.k-popups-wrapper,
 .k-menu-scroll-wrapper {
     position: relative;
     border: 0;
@@ -249,13 +287,17 @@ ul.k-menu-vertical .k-separator,
     padding: 0;
 }
 
+.k-popups-wrapper.vertical,
 .k-menu-scroll-wrapper.vertical {
     height: 100%;
 }
+
+.k-popups-wrapper > .k-animation-container .k-item,
 .k-menu-scroll-wrapper > .k-animation-container .k-item {
     float: none;
 }
 
+.k-popups-wrapper,
 .k-menu-scroll-wrapper {
     .k-menu-scroll-button {
         position: absolute;
@@ -274,6 +316,12 @@ ul.k-menu-vertical .k-separator,
         width: 100%;
     }
 
+    .k-scroll-up,
+    .k-scroll-down {
+        padding: 0em 0.7em;
+        line-height: 0.2em;
+    }
+
     .k-scroll-left {
         top: 0;
         left: 0;
@@ -284,6 +332,12 @@ ul.k-menu-vertical .k-separator,
         top: 0;
         right: 0;
         height: 100%;
+    }
+
+    .k-scroll-left,
+    .k-scroll-right {
+        padding-left: 0;
+        padding-right: 0;
     }
 }
 

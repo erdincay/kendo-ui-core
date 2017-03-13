@@ -290,7 +290,7 @@ var __meta__ = { // jshint ignore:line
             }
         },
 
-        _verticalLocation: function() {
+        _verticalLocation: function(isFixed) {
             var that = this,
                 element = that.element,
                 options = that.options,
@@ -322,7 +322,7 @@ var __meta__ = { // jshint ignore:line
                 wrapper.css(TOP, "-10000px");
             }
 
-            that._position({ isFixed: false });
+            that._position(isFixed || {});
 
             return {
                 height: kendo._outerHeight(wrapper),
