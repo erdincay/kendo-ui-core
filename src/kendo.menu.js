@@ -448,6 +448,16 @@ var __meta__ = { // jshint ignore:line
         return delta;
     }
 
+    function parentsScrollTop(current) {
+        var scrollTop = 0;
+        var parent = current.parentNode;
+        while(parent && !isNaN(parent.scrollTop)) {
+            scrollTop += parent.scrollTop;
+            parent = parent.parentNode;
+        }
+        return scrollTop;
+    }
+
     var Menu = Widget.extend({
         init: function(element, options) {
             var that = this;
@@ -1119,11 +1129,12 @@ var __meta__ = { // jshint ignore:line
             var windowHeight = $(window).height();
             var popupOuterHeight = location.height;
             var popupOffsetTop = Math.max(location.top, 0);
+            var scrollTop = isFixed ? 0 : parentsScrollTop(this._overflowWrapper()[0]);
             var maxHeight = windowHeight - kendo.getShadows(popupElement).bottom;
-            var canFit = maxHeight > popupOuterHeight + popupOffsetTop;
+            var canFit = maxHeight + scrollTop > popupOuterHeight + popupOffsetTop;
 
             if (!canFit) {
-                popups.css({overflow: "hidden", height: (maxHeight - popupOffsetTop) + "px"});
+                popups.css({overflow: "hidden", height: (maxHeight - popupOffsetTop + scrollTop) + "px"});
             }
         },
 
