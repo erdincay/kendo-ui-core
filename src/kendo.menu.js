@@ -955,7 +955,12 @@ var __meta__ = { // jshint ignore:line
                         }
 
                         li.data(ZINDEX, li.css(ZINDEX));
-                        li.css(ZINDEX, that.nextItemZIndex ++);
+                        var nextZindex = that.nextItemZIndex++;
+                        li.css(ZINDEX, nextZindex);
+
+                        if (that.options.scrollable) {
+                            li.parent().siblings(scrollButtonSelector).css({zIndex: ++nextZindex});
+                        }
 
                         popup = ul.data(KENDOPOPUP);
                         var root = li.parent().hasClass(MENU),
@@ -997,6 +1002,10 @@ var __meta__ = { // jshint ignore:line
                                     if (!that._triggerEvent({ item: li[0], type: CLOSE })) {
                                         li.css(ZINDEX, li.data(ZINDEX));
                                         li.removeData(ZINDEX);
+
+                                        if (that.options.scrollable) {
+                                            li.parent().siblings(scrollButtonSelector).css({zIndex: ""});
+                                        }
 
                                         if (touch) {
                                             li.removeClass(HOVERSTATE);
@@ -1042,7 +1051,7 @@ var __meta__ = { // jshint ignore:line
 
         _wrapPopupElement: function(popup){
             if (!popup.element.parent().is(animationContainerSelector)) {
-                kendo.wrap(popup.element, popup.options.autosize)
+                popup.wrapper = kendo.wrap(popup.element, popup.options.autosize)
                     .css({
                         overflow: "hidden",
                         display: "block",
@@ -2172,6 +2181,7 @@ var __meta__ = { // jshint ignore:line
 
         _popup: function() {
             var that = this;
+            var overflowWrapper = that._overflowWrapper();
 
             that._triggerProxy = proxy(that._triggerEvent, that);
 
@@ -2184,7 +2194,7 @@ var __meta__ = { // jshint ignore:line
                                 animation: that.options.animation,
                                 activate: that._triggerProxy,
                                 deactivate: that._triggerProxy,
-                                appendTo: that._overflowWrapper() || that.options.appendTo
+                                appendTo: overflowWrapper || that.options.appendTo
                             }).data("kendoPopup");
 
             that._targetChild = contains(that.target[0], that.popup.element[0]);
