@@ -670,6 +670,8 @@ var __meta__ = { // jshint ignore:line
             var mouseScrollSpeed = that.options.mouseScrollSpeed || (SCROLLSPEED / 2);
             var backward = "-=" + speed;
             var forward = "+=" + speed;
+            var backwardDouble = "-=" + speed * 2;
+            var forwardDouble = "+=" + speed * 2;
             var scrolling = false;
 
             var scroll = function(value) {
@@ -690,8 +692,22 @@ var __meta__ = { // jshint ignore:line
                 e.stopPropagation();
             };
 
-            backwardBtn.on(MOUSEENTER + NS, {direction: backward}, mouseenterHandler);
-            forwardBtn.on(MOUSEENTER + NS, {direction: forward}, mouseenterHandler);
+            var mousedownHandler = function(e) {
+                var scrollValue = isHorizontal ? {"scrollLeft": e.data.direction} : { "scrollTop": e.data.direction };
+                scrollElement.stop().animate(scrollValue, "fast", "linear", function(){
+                    $(e.currentTarget).trigger(MOUSEENTER);
+                });
+                scrolling = false;
+
+                e.stopPropagation();
+                e.preventDefault();
+            };
+
+            backwardBtn.on(MOUSEENTER + NS, {direction: backward}, mouseenterHandler)
+                .on(kendo.eventMap.down + NS, {direction: backwardDouble}, mousedownHandler);
+
+            forwardBtn.on(MOUSEENTER + NS, {direction: forward}, mouseenterHandler)
+                .on(kendo.eventMap.down + NS, {direction: forwardDouble}, mousedownHandler);
 
             backwardBtn.add(forwardBtn)
                 .on(MOUSELEAVE + NS, function() {
