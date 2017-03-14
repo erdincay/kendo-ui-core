@@ -477,9 +477,9 @@ var __meta__ = { // jshint ignore:line
 
             that._tabindex();
 
-            that._initOverflow(options);
-
             that._attachMenuEventsHandlers();
+
+            that._initOverflow(options);
 
             if (options.openOnClick) {
                 that.clicked = false;
@@ -1697,6 +1697,7 @@ var __meta__ = { // jshint ignore:line
                     nextItem.attr("id", id);
                     that.element.attr("aria-activedescendant", id);
                 }
+                that._scrollToItem(nextItem);
             }
         },
 
@@ -1824,6 +1825,37 @@ var __meta__ = { // jshint ignore:line
 
             that._moveHover(item, nextItem);
             return nextItem;
+        },
+
+        _scrollToItem: function(item){
+            var that = this;
+            if (that.options.scrollable && item && item.length) {
+                var ul = item.parent();
+                var isHorizontal = ul.hasClass(MENU) ? that.options.orientation == "horizontal" : false;
+                var scrollDir = isHorizontal ? "scrollLeft" : "scrollTop";
+                var getSize = isHorizontal ? kendo._outerWidth : kendo._outerHeight;
+                var currentScrollOffset = ul[scrollDir]();
+                var itemSize = getSize(item);
+                var itemOffset = item[0][isHorizontal ? "offsetLeft" : "offsetTop"];
+                var ulSize = getSize(ul);
+                var scrollButtons = ul.siblings(scrollButtonSelector);
+                var scrollButtonSize = scrollButtons.length ? getSize(scrollButtons.first()) : 0;
+                var itemPosition;
+
+                if (currentScrollOffset + ulSize < itemOffset + itemSize + scrollButtonSize) {
+                    itemPosition = itemOffset + itemSize - ulSize + scrollButtonSize;
+                } else if (currentScrollOffset > itemOffset - scrollButtonSize) {
+                    itemPosition = itemOffset - scrollButtonSize;
+                }
+
+                if (!isNaN(itemPosition)) {
+                    var scrolling = {};
+                    scrolling[scrollDir] = itemPosition;
+                    ul.finish().animate(scrolling, "fast", "linear", function () {
+                        that._toggleScrollButtons(ul, scrollButtons.first(), scrollButtons.last(), isHorizontal);
+                    });
+                }
+            }
         },
 
         _itemEsc: function (item, belongsToVertical) {
