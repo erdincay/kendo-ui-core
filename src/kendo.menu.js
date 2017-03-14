@@ -426,6 +426,9 @@ var __meta__ = { // jshint ignore:line
         while($(last).is(animationContainerSelector)){
             var popupElement = $(last).children("ul");
             elem = popupParentItem(popupElement, overflowWrapper)[0];
+            if (!elem) {
+                break;
+            }
             parents.push(elem);
             getParents(elem);
             last = parents[parents.length - 1];
