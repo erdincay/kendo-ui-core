@@ -290,7 +290,7 @@ var __meta__ = { // jshint ignore:line
             }
         },
 
-        _verticalLocation: function(isFixed) {
+        _location: function(isFixed) {
             var that = this,
                 element = that.element,
                 options = that.options,
@@ -324,9 +324,12 @@ var __meta__ = { // jshint ignore:line
 
             that._position(isFixed || {});
 
+            var offset = wrapper.offset();
             return {
+                width: kendo._outerWidth(wrapper),
                 height: kendo._outerHeight(wrapper),
-                top: wrapper.offset().top
+                left: offset.left,
+                top: offset.top
             };
         },
 
@@ -711,9 +714,9 @@ var __meta__ = { // jshint ignore:line
             };
         }
     });
-    
+
     ui.plugin(Popup);
-    
+
     var tabKeyTrapNS = "kendoTabKeyTrap";
     var focusableNodesSelector = "a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex], *[contenteditable]";
     var TabKeyTrap = Class.extend({
@@ -750,7 +753,7 @@ var __meta__ = { // jshint ignore:line
             });
             var focusableItemsCount = focusableItems.length;
             var lastIndex = focusableItemsCount - 1;
-            var focusedItemIndex = focusableItems.index(target);                             
+            var focusedItemIndex = focusableItems.index(target);
 
             if (e.shiftKey) {
                 if (focusedItemIndex === 0) {
@@ -774,7 +777,7 @@ var __meta__ = { // jshint ignore:line
     ui.Popup.TabKeyTrap = TabKeyTrap;
 })(window.kendo.jQuery);
 
-    
+
 
 return window.kendo;
 

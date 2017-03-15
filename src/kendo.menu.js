@@ -47,6 +47,7 @@ var __meta__ = { // jshint ignore:line
         MOUSEENTER = pointers ? "pointerenter" : (msPointers ? "MSPointerEnter" : "mouseenter"),
         MOUSELEAVE = pointers ? "pointerleave" : (msPointers ? "MSPointerLeave" : "mouseleave"),
         MOUSEWHEEL = "DOMMouseScroll" + NS + " mousewheel" + NS,
+        RESIZE = kendo.support.resize + NS,
         SCROLLWIDTH = "scrollWidth",
         SCROLLHEIGHT = "scrollHeight",
         OFFSETWIDTH = "offsetWidth",
@@ -451,14 +452,14 @@ var __meta__ = { // jshint ignore:line
         return delta;
     }
 
-    function parentsScrollTop(current) {
-        var scrollTop = 0;
+    function parentsScroll(current, scrollDirection) {
+        var scroll = 0;
         var parent = current.parentNode;
-        while(parent && !isNaN(parent.scrollTop)) {
-            scrollTop += parent.scrollTop;
+        while(parent && !isNaN(parent[scrollDirection])) {
+            scroll += parent[scrollDirection];
             parent = parent.parentNode;
         }
-        return scrollTop;
+        return scroll;
     }
 
     var Menu = Widget.extend({
@@ -606,8 +607,18 @@ var __meta__ = { // jshint ignore:line
 
                 that._initScrolling(that.element, backwardBtn, forwardBtn, isHorizontal);
 
-                that._setOverflowWrapperSize();
+                var initialWidth = that.element.outerWidth();
+                var initialCssWidth = that.element[0].style.width;
+                initialCssWidth = initialCssWidth === "auto" ? "" : initialCssWidth;
 
+                if (isHorizontal) {
+                    $(window).on(RESIZE, kendo.throttle(function(){
+                        that._setOverflowWrapperWidth(initialWidth, initialCssWidth);
+                        that._toggleScrollButtons(that.element, backwardBtn, forwardBtn, isHorizontal);
+                    }, 100));
+                }
+
+                that._setOverflowWrapperWidth(initialWidth, initialCssWidth);
                 that._toggleScrollButtons(that.element, backwardBtn, forwardBtn, isHorizontal);
             }
         },
@@ -616,18 +627,21 @@ var __meta__ = { // jshint ignore:line
             return this._scrollWrapper || this._popupsWrapper;
         },
 
-        _setOverflowWrapperSize: function() {
+        _setOverflowWrapperWidth: function(initialWidth, initialCssWidth) {
             var that = this;
+            var wrapperCssWidth = that._scrollWrapper.css("width");
+
+            that._scrollWrapper.css({width: ""});
             var wrapperWidth = that._scrollWrapper.outerWidth();
-            var wrapperHeight = that._scrollWrapper.outerHeight();
+            that._scrollWrapper.css({ width: wrapperCssWidth });
+
             var menuWidth = that.element.outerWidth();
-            var menuHeight = that.element.outerHeight();
+            var borders = that.element[0].offsetWidth - that.element[0].clientWidth;
 
             if (menuWidth != wrapperWidth) {
-                that._scrollWrapper.width(menuWidth);
-            }
-            if (menuHeight != wrapperHeight) {
-                that._scrollWrapper.height(menuHeight);
+                var width = initialCssWidth ? Math.min(initialWidth, wrapperWidth) : wrapperWidth;
+                that.element.width(width - borders);
+                that._scrollWrapper.width(width);
             }
         },
 
@@ -661,6 +675,7 @@ var __meta__ = { // jshint ignore:line
                 overflowWrapper.find(popupOpenerSelector()).removeAttr("data-groupparent");
                 overflowWrapper.find(popupGroupSelector()).removeAttr("data-group");
                 that.element.off(MOUSEWHEEL);
+                $(window).off(RESIZE);
                 overflowWrapper.contents().unwrap();
 
                 that._scrollWrapper = that._popupsWrapper = that._openedPopups = undefined;
@@ -1142,13 +1157,14 @@ var __meta__ = { // jshint ignore:line
         _setPopupHeight: function(popup, isFixed){
             var popupElement = popup.element;
             var popups = popupElement.add(popupElement.parent(animationContainerSelector));
-            popups.height("");
 
-            var location = popup._verticalLocation(isFixed);
+            popups.height((popupElement.hasClass(MENU) && this._initialHeight) || "");
+
+            var location = popup._location(isFixed);
             var windowHeight = $(window).height();
             var popupOuterHeight = location.height;
             var popupOffsetTop = Math.max(location.top, 0);
-            var scrollTop = isFixed ? 0 : parentsScrollTop(this._overflowWrapper()[0]);
+            var scrollTop = isFixed ? 0 : parentsScroll(this._overflowWrapper()[0], "scrollTop");
             var maxHeight = windowHeight - kendo.getShadows(popupElement).bottom;
             var canFit = maxHeight + scrollTop > popupOuterHeight + popupOffsetTop;
 
@@ -1984,6 +2000,9 @@ var __meta__ = { // jshint ignore:line
                 if (options.appendTo) {
                     options.appendTo.append(that._popupsWrapper);
                 }
+
+                that._initialHeight = that.element.css("height");
+                that._initialWidth = that.element.css("width");
             }
         },
 
@@ -2059,8 +2078,8 @@ var __meta__ = { // jshint ignore:line
                             x -= offset.left;
                             y -= offset.top;
                         }
-                        that._configurePopupScrolling(x, y);
                         that.popup.wrapper.hide();
+                        that._configurePopupScrolling(x, y);
                         that.popup.open(x, y);
                     } else {
                         that.popup.options.anchor = (x ? x : that.popup.anchor) || that.target;
@@ -2081,6 +2100,7 @@ var __meta__ = { // jshint ignore:line
         _configurePopupScrolling: function(x, y){
             var that = this;
             var popup = that.popup;
+            var isHorizontal = that.options.orientation == "horizontal";
 
             if (that.options.scrollable) {
                 that._wrapPopupElement(popup);
@@ -2096,7 +2116,11 @@ var __meta__ = { // jshint ignore:line
                     position: ""
                 });
 
-                that._setPopupHeight(popup, isNaN(x) ? undefined : {isFixed: true, x: x, y: y});
+                if (isHorizontal) {
+                    that._setPopupWidth(popup, isNaN(x) ? undefined : {isFixed: true, x: x, y: y});
+                } else {
+                    that._setPopupHeight(popup, isNaN(x) ? undefined : {isFixed: true, x: x, y: y});
+                }
 
                 popup.element.css({
                     visibility: "",
@@ -2104,7 +2128,25 @@ var __meta__ = { // jshint ignore:line
                     position: "absolute"
                 });
 
-                that._initPopupScrollButtons(popup, that.options.orientation == "horizontal", true);
+                that._initPopupScrollButtons(popup, isHorizontal, true);
+            }
+        },
+
+        _setPopupWidth: function(popup, isFixed){
+            var popupElement = popup.element;
+            var popups = popupElement.add(popupElement.parent(animationContainerSelector));
+
+            popups.width(this._initialWidth || "");
+
+            var location = popup._location(isFixed);
+            var windowWidth = $(window).width();
+            var popupOuterWidth = location.width;
+            var popupOffsetLeft = Math.max(location.left, 0);
+            var scrollLeft = isFixed ? 0 : parentsScroll(this._overflowWrapper()[0], "scrollLeft");
+            var canFit = windowWidth + scrollLeft > popupOuterWidth + popupOffsetLeft;
+
+            if (!canFit) {
+                popups.css({overflow: "hidden", width: (windowWidth - popupOffsetLeft + scrollLeft) + "px"});
             }
         },
 
