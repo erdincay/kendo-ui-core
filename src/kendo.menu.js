@@ -480,9 +480,9 @@ var __meta__ = { // jshint ignore:line
 
             that._tabindex();
 
-            that._attachMenuEventsHandlers();
-
             that._initOverflow(options);
+
+            that._attachMenuEventsHandlers();
 
             if (options.openOnClick) {
                 that.clicked = false;
@@ -1972,11 +1972,11 @@ var __meta__ = { // jshint ignore:line
             that._popup();
             that._wire();
         },
+
         _initOverflow: function(options){
             var that = this;
             if (options.scrollable && !that._overflowWrapper()) {
                 that._openedPopups = {};
-                that._detachMenuEventsHandlers();
 
                 that._popupsWrapper = (that.element.parent().is(animationContainerSelector) ? that.element.parent() : that.element)
                     .wrap("<div class='k-popups-wrapper " + options.orientation + "'></div>").parent();
@@ -1984,28 +1984,9 @@ var __meta__ = { // jshint ignore:line
                 if (options.appendTo) {
                     options.appendTo.append(that._popupsWrapper);
                 }
-                that._attachMenuEventsHandlers();
             }
         },
-        _destroyContextMenuOverflow: function(){
-            var that = this;
-            if (that._popupsWrapper) {
-                that.popup.element.Off(MOUSEWHEEL);
-                if (that.popup.wrapper[0]) {
-                    that.popup.wrapper.children(scrollButtonSelector).off(NS).remove();
-                }
-                that._popupsWrapper.off(NS);
-                that._popupsWrapper.contents().unwrap();
-                that._popupsWrapper = undefined;
-            }
-        },
-        _reInitContextMenuOverflow: function(options){
-            var that = this;
-            if(options.scrollable != that.options.scrollable || options.orientation != that.options.orientation) {
-                that._destroyContextMenuOverflow();
-                that._initContextMenuOverflow(options);
-            }
-        },
+
         options: {
             name: "ContextMenu",
             filter: null,
