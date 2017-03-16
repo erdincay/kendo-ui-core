@@ -710,7 +710,6 @@ var __meta__ = { // jshint ignore:line
                     scroll(e.data.direction);
                     scrolling = true;
                 }
-                e.stopPropagation();
             };
 
             var mousedownHandler = function(e) {
@@ -954,7 +953,7 @@ var __meta__ = { // jshint ignore:line
 
             var visiblePopups = ">.k-popup:visible,>.k-animation-container>.k-popup:visible";
             var closePopup = function () {
-                var popup = $(this).data("kendoPopup");
+                var popup = $(this).data(KENDOPOPUP);
                 if (popup) {
                     popup.close(true);
                 }
@@ -1130,7 +1129,6 @@ var __meta__ = { // jshint ignore:line
                     that._initScrolling(popup.element, backwardBtn, forwardBtn, isHorizontal);
                     if (!skipMouseEvents) {
                         scrollButtons.on(MOUSEENTER + NS, function() {
-                            that._openedPopups.scrolling = popup.element.data(POPUP_ID_ATTR);
                             var overflowWrapper = that._overflowWrapper();
                             $(getChildPopups(popup.element, overflowWrapper)).each(function(i, p){
                                 var popupOpener = overflowWrapper.find(popupOpenerSelector(p.data(POPUP_ID_ATTR)));
@@ -1138,7 +1136,6 @@ var __meta__ = { // jshint ignore:line
                             });
                         })
                         .on(MOUSELEAVE + NS, function(){
-                            delete that._openedPopups.scrolling;
                             setTimeout(function(){
                                 if ($.isEmptyObject(that._openedPopups)) {
                                     that._closeParentPopups(popup.element);
@@ -1199,10 +1196,6 @@ var __meta__ = { // jshint ignore:line
                 return result;
             };
 
-            var isScrolling = function(popupElement) {
-                return that._openedPopups && that._openedPopups.scrolling && popupElement.data(POPUP_ID_ATTR) == that._openedPopups.scrolling;
-            };
-
             var isPopupMouseLeaved = function(opener) {
                 var groupId = opener.data(POPUP_OPENER_ATTR);
                 return (!overflowWrapper || !groupId || !that._openedPopups[groupId.toString()]);
@@ -1220,7 +1213,7 @@ var __meta__ = { // jshint ignore:line
                 li.data(TIMER, setTimeout(function () {
                     var popup = that._getPopup(li);
                     if (popup && (isPopupMouseLeaved(li) || that._forceClose)) {
-                        if (!that._forceClose && (hasChildPopupsHovered(popup.element) || isScrolling(popup.element))) {
+                        if (!that._forceClose && hasChildPopupsHovered(popup.element)) {
                             return;
                         }
 
@@ -2292,7 +2285,7 @@ var __meta__ = { // jshint ignore:line
                                         }
                                     });
                                 }
-                            }).data("kendoPopup");
+                            }).data(KENDOPOPUP);
 
             that._targetChild = contains(that.target[0], that.popup.element[0]);
         }
