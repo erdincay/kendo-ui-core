@@ -2,7 +2,7 @@
 var isRaised, isOpenRaised, isCloseRaised, isSelectRaised, selected;
 
 function getRootItem(index) {
-   return $('#menu').find('> .k-item > .k-link').eq(index)
+   return $('#menu').find('> .k-item > .k-link').eq(index);
 }
 
  //handlers
@@ -381,6 +381,47 @@ test('overflow menu - setOptions reattach events', 2, function() {
     removeMocksIn(kendo.ui.Menu.fn);
 
     m.destroy();
+});
+
+asyncTest('overflow menu - opened popups should be inserted after the menu', function() {
+    menu.setOptions({ scrollable: true, orientation: "horizontal" });
+    var item = getRootItem(6).parent();
+
+    menu.open(item);
+
+    setTimeout(function () {
+        equal(menu.element.siblings(".k-animation-container").length, 1);
+        start();
+    }, 1);
+});
+
+asyncTest('overflow menu - opened popups should contains scroll buttons', function() {
+    menu.setOptions({ scrollable: true, orientation: "horizontal" });
+    var item = getRootItem(6).parent();
+
+    menu.open(item);
+
+    setTimeout(function () {
+        equal(menu.element.siblings(".k-menu-scroll-button").length, 2);
+        start();
+    }, 1);
+});
+
+asyncTest('overflow menu - turning off scrollable should return back the opened UL groups to their parent LI', function() {
+    menu.setOptions({ scrollable: true, orientation: "horizontal" });
+    var item = getRootItem(6).parent();
+
+    menu.open(item);
+
+    setTimeout(function () {
+        menu.close(item);
+        setTimeout(function () {
+            menu.setOptions({ scrollable: false });
+            notOk(menu._overflowWrapper());
+            equal(menu.element.siblings(".k-animation-container,.k-menu-scroll-button").length, 0);
+            start();
+        }, 1);
+    }, 1);
 });
 
 test("Element with class k-icon doesn't get removed in an item", function () {
