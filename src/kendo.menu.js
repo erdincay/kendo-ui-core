@@ -54,7 +54,6 @@ var __meta__ = { // jshint ignore:line
         OFFSETHEIGHT = "offsetHeight",
         POPUP_ID_ATTR = "group",
         POPUP_OPENER_ATTR = "groupparent",
-        mobile = touch || allPointers,
         DOCUMENT_ELEMENT = $(document.documentElement),
         KENDOPOPUP = "kendoPopup",
         DEFAULTSTATE = "k-state-default",
@@ -460,6 +459,10 @@ var __meta__ = { // jshint ignore:line
             parent = parent.parentNode;
         }
         return scroll;
+    }
+
+    function isPointerTouch(e){
+        return allPointers && e.originalEvent.pointerType in touchPointerTypes;
     }
 
     var Menu = Widget.extend({
@@ -1336,6 +1339,7 @@ var __meta__ = { // jshint ignore:line
             var element = $(e.currentTarget);
             var hasChildren = that._itemHasChildren(element);
             var popupId = element.data(POPUP_OPENER_ATTR) || element.parent().data(POPUP_ID_ATTR);
+            var pointerTouch = isPointerTouch(e);
 
             if (popupId) {
                 that._openedPopups[popupId.toString()] = true;
@@ -1345,14 +1349,14 @@ var __meta__ = { // jshint ignore:line
                 return;
             }
 
-            if ((!that.options.openOnClick || that.clicked) && !touch && !((pointers || msPointers) &&
-                e.originalEvent.pointerType in touchPointerTypes && that._isRootItem(element.closest(allItemsSelector)))) {
+            if ((!that.options.openOnClick || that.clicked) && !touch &&
+                !(pointerTouch && that._isRootItem(element.closest(allItemsSelector)))) {
                 if (!contains(e.currentTarget, e.relatedTarget) && hasChildren) {
                     that.open(element);
                 }
             }
 
-            if (that.options.openOnClick && that.clicked || mobile) {
+            if (that.options.openOnClick && that.clicked || touch || pointerTouch) {
                 element.siblings().each(proxy(function (_, sibling) {
                     that.close(sibling, true);
                 }, that));
@@ -1373,8 +1377,8 @@ var __meta__ = { // jshint ignore:line
                 e.stopImmediatePropagation();
                 return;
             }
-            var isPointer = (pointers || msPointers) && e.originalEvent.pointerType in touchPointerTypes;
-            if (!that.options.openOnClick && !touch && !isPointer &&
+
+            if (!that.options.openOnClick && !touch && !isPointerTouch(e) &&
                 !contains(e.currentTarget, e.relatedTarget || e.target) && hasChildren &&
                 !contains(e.currentTarget, kendo._activeElement())) {
                     that.close(element);
@@ -1527,7 +1531,7 @@ var __meta__ = { // jshint ignore:line
                 link[0].click();
             }
 
-            if ((!that._isRootItem(element) || !options.openOnClick) && !kendo.support.touch && !((pointers || msPointers) && that._isRootItem(element.closest(allItemsSelector)))) {
+            if ((!that._isRootItem(element) || !options.openOnClick) && !kendo.support.touch && !(allPointers && that._isRootItem(element.closest(allItemsSelector)))) {
                 return;
             }
 
