@@ -2283,7 +2283,15 @@ var __meta__ = { // jshint ignore:line
                                 animation: that.options.animation,
                                 activate: that._triggerProxy,
                                 deactivate: that._triggerProxy,
-                                appendTo: overflowWrapper || that.options.appendTo
+                                appendTo: overflowWrapper || that.options.appendTo,
+                                close: !overflowWrapper ? $.noop : function(e) {
+                                    $(getChildPopups(e.sender.element, overflowWrapper)).each(function(i, p) {
+                                        var popup = p.data(KENDOPOPUP);
+                                        if (popup) {
+                                            popup.close(true);
+                                        }
+                                    });
+                                }
                             }).data("kendoPopup");
 
             that._targetChild = contains(that.target[0], that.popup.element[0]);
