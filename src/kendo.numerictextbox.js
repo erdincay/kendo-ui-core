@@ -33,6 +33,7 @@ var __meta__ = { // jshint ignore:line
         DEFAULT = "k-state-default",
         FOCUSED = "k-state-focused",
         HOVER = "k-state-hover",
+        INVALID = "k-state-invalid",
         FOCUS = "focus",
         POINT = ".",
         SELECTED = "k-state-selected",
@@ -79,6 +80,7 @@ var __meta__ = { // jshint ignore:line
              that._reset();
              that._wrapper();
              that._arrows();
+             that._validation();
              that._input();
 
              if (!kendo.support.mobileOS) {
@@ -308,6 +310,16 @@ var __meta__ = { // jshint ignore:line
             that._downArrowEventHandler = new kendo.UserEvents(that._downArrow, { release: _release });
         },
 
+        _validation: function () {
+            var that = this,
+                element = that.element;
+
+            that._validationIcon = $("<span>")
+                .addClass("k-icon k-i-warning")
+                .hide()
+                .insertAfter(element);
+        },
+
         _blur: function() {
             var that = this,
                 factor = that.options.factor,
@@ -501,10 +513,25 @@ var __meta__ = { // jshint ignore:line
 
                 e.preventDefault();
             } else if ((min !== null && min >= 0 && value.charAt(0) === "-") || !isValid) {
+                that._blinkInvalidState();
                 e.preventDefault();
             }
 
             that._key = 0;
+        },
+
+        _blinkInvalidState: function () {
+            var that = this,
+                wrapper = that._inputWrapper.addClass(INVALID);
+
+            that._validationIcon.show();
+            clearTimeout(that._blinkTimeout);
+
+            that._blinkTimeout = setTimeout(function(){
+                wrapper.removeClass(INVALID);
+                that._validationIcon.hide();
+                that._blinkTimeout = null;
+            }, 100);
         },
 
         _numericRegex: function(numberFormat) {

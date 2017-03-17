@@ -505,4 +505,25 @@
 
         equal(textbox._text.attr("title"), 20);
     });
+
+    asyncTest("input blinks when invalid input is entered.", function () {
+        var textbox = input.kendoNumericTextBox().data("kendoNumericTextBox"),
+            icon = textbox._validationIcon,
+            wrapper = textbox._inputWrapper,
+            keyPressA = $.Event("keypress", { keyCode: 65 }),
+            invalidClass ="k-state-invalid";
+
+        ok(!wrapper.hasClass(invalidClass));
+        equal(icon.css("display"), "none");
+
+        textbox.element.trigger(keyPressA);
+        ok(wrapper.hasClass(invalidClass));
+        notEqual(icon.css("display"), "none");
+
+        setTimeout(function () {
+            start();
+            ok(!wrapper.hasClass(invalidClass));
+            equal(icon.css("display"), "none");
+        }, 120);
+    });
 })();
