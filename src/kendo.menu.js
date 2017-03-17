@@ -650,7 +650,9 @@ var __meta__ = { // jshint ignore:line
 
         _reinitOverflow: function(options) {
             var that = this;
-            var overflowChanged = options.scrollable != that.options.scrollable || options.orientation != that.options.orientation;
+            var overflowChanged = ((options.scrollable && !that.options.scrollable) || (!options.scrollable && that.options.scrollable)) ||
+                (options.scrollable && that.options.scrollable && options.scrollable.distance != that.options.scrollable.distance) ||
+                options.orientation != that.options.orientation;
 
             if (overflowChanged) {
                 that._detachMenuEventsHandlers();
@@ -687,12 +689,13 @@ var __meta__ = { // jshint ignore:line
 
         _initScrolling: function(scrollElement, backwardBtn, forwardBtn, isHorizontal) {
             var that = this;
-            var speed = that.options.scrollSpeed || SCROLLSPEED;
-            var mouseScrollSpeed = that.options.mouseScrollSpeed || (SCROLLSPEED / 2);
-            var backward = "-=" + speed;
-            var forward = "+=" + speed;
-            var backwardDouble = "-=" + speed * 2;
-            var forwardDouble = "+=" + speed * 2;
+            var scrollable = that.options.scrollable;
+            var distance =  $.isNumeric(scrollable.distance) ? scrollable.distance : SCROLLSPEED;
+            var mouseWheelDistance = distance / 2;
+            var backward = "-=" + distance;
+            var forward = "+=" + distance;
+            var backwardDouble = "-=" + distance * 2;
+            var forwardDouble = "+=" + distance * 2;
             var scrolling = false;
 
             var scroll = function(value) {
@@ -739,7 +742,7 @@ var __meta__ = { // jshint ignore:line
             scrollElement.on(MOUSEWHEEL, function(e){
                 if (!e.ctrlKey && !e.shiftKey && !e.altKey) {
                     var wheelDelta = mousewheelDelta(e.originalEvent);
-                    var scrollSpeed = Math.abs(wheelDelta) * mouseScrollSpeed;
+                    var scrollSpeed = Math.abs(wheelDelta) * mouseWheelDistance;
                     var value = (wheelDelta > 0 ? "+=" : "-=") + scrollSpeed;
                     var scrollValue = isHorizontal ? {"scrollLeft": value} : {"scrollTop": value };
 
