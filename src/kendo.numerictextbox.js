@@ -33,11 +33,12 @@ var __meta__ = { // jshint ignore:line
         DEFAULT = "k-state-default",
         FOCUSED = "k-state-focused",
         HOVER = "k-state-hover",
-        INVALID = "k-state-invalid",
         FOCUS = "focus",
         POINT = ".",
+        CLASS_ICON = "k-icon",
         SELECTED = "k-state-selected",
         STATEDISABLED = "k-state-disabled",
+        STATE_INVALID = "k-state-invalid",
         ARIA_DISABLED = "aria-disabled",
         INTEGER_REGEXP = /^(-)?(\d*)$/,
         NULL = null,
@@ -290,7 +291,7 @@ var __meta__ = { // jshint ignore:line
             spinners = options.spinners,
             element = that.element;
 
-            arrows = element.siblings(".k-icon");
+            arrows = element.siblings("." + CLASS_ICON);
 
             if (!arrows[0]) {
                 arrows = $(buttonHtml("increase", options.upArrowText) + buttonHtml("decrease", options.downArrowText))
@@ -311,11 +312,11 @@ var __meta__ = { // jshint ignore:line
         },
 
         _validation: function () {
-            var that = this,
-                element = that.element;
+            var that = this;
+            var element = that.element;
+            var VALIDATION_ICON = "<span class='" + CLASS_ICON + " k-i-warning'></span>";
 
-            that._validationIcon = $("<span>")
-                .addClass("k-icon k-i-warning")
+            that._validationIcon = $(VALIDATION_ICON)
                 .hide()
                 .insertAfter(element);
         },
@@ -521,17 +522,20 @@ var __meta__ = { // jshint ignore:line
         },
 
         _blinkInvalidState: function () {
-            var that = this,
-                wrapper = that._inputWrapper.addClass(INVALID);
+            var that = this;
+            var wrapper = that._inputWrapper.addClass(STATE_INVALID);
 
             that._validationIcon.show();
             clearTimeout(that._blinkTimeout);
+            that._blinkTimeout = setTimeout(proxy(that._removeInvalidState, that), 100);
+        },
 
-            that._blinkTimeout = setTimeout(function(){
-                wrapper.removeClass(INVALID);
-                that._validationIcon.hide();
-                that._blinkTimeout = null;
-            }, 100);
+        _removeInvalidState: function () {
+            var that = this;
+            var wrapper = that._inputWrapper.removeClass(STATE_INVALID);
+
+            that._validationIcon.hide();
+            that._blinkTimeout = null;
         },
 
         _numericRegex: function(numberFormat) {
@@ -758,7 +762,7 @@ var __meta__ = { // jshint ignore:line
 
         return (
             '<span unselectable="on" class="k-link k-link-' + direction + '" aria-label="' + text + '" title="' + text + '">' +
-                '<span unselectable="on" class="k-icon ' + className + '"></span>' +
+                '<span unselectable="on" class="' + CLASS_ICON + ' ' + className + '"></span>' +
             '</span>'
         );
     }
