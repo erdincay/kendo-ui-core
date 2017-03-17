@@ -26,6 +26,7 @@ var __meta__ = { // jshint ignore:line
 
     var INPUT_EVENT_NAME = (kendo.support.propertyChangeEvent ? "propertychange" : "input") + ns;
     var STATEDISABLED = "k-state-disabled";
+    var STATEINVALID = "k-state-invalid";
     var DISABLED = "disabled";
     var READONLY = "readonly";
     var CHANGE = "change";
@@ -554,6 +555,8 @@ var __meta__ = { // jshint ignore:line
                     if (matchesRule(chr, tokenRule)) {
                         result += chr;
                         tokenIdx += 1;
+                    } else {
+                        console.log('on error input', STATEINVALID);
                     }
 
                     chrIdx += 1;
