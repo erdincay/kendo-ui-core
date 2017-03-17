@@ -1168,7 +1168,8 @@ var __meta__ = { // jshint ignore:line
             var popupOuterHeight = location.height;
             var popupOffsetTop = Math.max(location.top, 0);
             var scrollTop = isFixed ? 0 : parentsScroll(this._overflowWrapper()[0], "scrollTop");
-            var maxHeight = windowHeight - kendo.getShadows(popupElement).bottom;
+            var bottomScrollbar = window.innerHeight - windowHeight;
+            var maxHeight = windowHeight - kendo.getShadows(popupElement).bottom + bottomScrollbar;
             var canFit = maxHeight + scrollTop > popupOuterHeight + popupOffsetTop;
 
             if (!canFit) {
@@ -2001,8 +2002,8 @@ var __meta__ = { // jshint ignore:line
                     options.appendTo.append(that._popupsWrapper);
                 }
 
-                that._initialHeight = that.element.css("height");
-                that._initialWidth = that.element.css("width");
+                that._initialHeight = that.element[0].style.height;
+                that._initialWidth = that.element[0].style.width;
             }
         },
 
@@ -2143,10 +2144,12 @@ var __meta__ = { // jshint ignore:line
             var popupOuterWidth = location.width;
             var popupOffsetLeft = Math.max(location.left, 0);
             var scrollLeft = isFixed ? 0 : parentsScroll(this._overflowWrapper()[0], "scrollLeft");
-            var canFit = windowWidth + scrollLeft > popupOuterWidth + popupOffsetLeft;
+            var shadow = kendo.getShadows(popupElement);
+            var maxWidth = windowWidth - shadow.left - shadow.right;
+            var canFit = maxWidth + scrollLeft > popupOuterWidth + popupOffsetLeft;
 
             if (!canFit) {
-                popups.css({overflow: "hidden", width: (windowWidth - popupOffsetLeft + scrollLeft) + "px"});
+                popups.css({overflow: "hidden", width: (maxWidth - popupOffsetLeft + scrollLeft) + "px"});
             }
         },
 
